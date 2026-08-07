@@ -27,7 +27,13 @@
     editorIds: [],
     editorIndex: 0,
     activeTextId: null,
-    stitchIds: []
+    stitchIds: [],
+    draftText: {
+      value: "",
+      fontSizePercent: 5,
+      color: "#ffffff",
+      background: "none"
+    }
   };
 
   var els = {};
@@ -134,17 +140,24 @@
 
     els.textValue.addEventListener("input", function () {
       var obj = getActiveTextObject();
-      if (!obj) return;
+      if (!obj) {
+        state.draftText.value = els.textValue.value;
+        return;
+      }
       obj.set("text", els.textValue.value);
       canvas.requestRenderAll();
       syncObjectToModel(obj);
     });
     els.fontSize.addEventListener("input", function () {
       var obj = getActiveTextObject();
-      if (!obj) return;
       var percent = Number(els.fontSize.value);
-      obj.set("fontSize", canvas.getWidth() * (percent / 100));
       els.fontSizeValue.textContent = percent.toFixed(1).replace(".0", "") + "%";
+      if (!obj) {
+        state.draftText.fontSizePercent = percent;
+        return;
+      }
+      obj.set("fontSize", canvas.getWidth() * (percent / 100));
+      state.draftText.fontSizePercent = percent;
       canvas.requestRenderAll();
       syncObjectToModel(obj);
     });
@@ -444,15 +457,16 @@
   function addTextBox() {
     var photo = getPhoto(currentPhotoId);
     if (!photo) return;
+    var draft = readDraftFromControls();
     var text = {
       id: makeId(),
-      value: "Text",
+      value: draft.value || "Text",
       x: 0.1,
       y: 0.1,
       widthRatio: 0.6,
-      fontSizeRatio: 0.05,
-      color: "#ffffff",
-      background: "none"
+      fontSizeRatio: draft.fontSizePercent / 100,
+      color: draft.color,
+      background: draft.background
     };
     photo.texts.push(text);
     var obj = createFabricText(text);
@@ -482,32 +496,45 @@
 
   function updateTextControls() {
     var obj = getActiveTextObject();
+    var hasPhoto = Boolean(currentPhotoId);
     var enabled = Boolean(obj);
-    els.textValue.disabled = !enabled;
-    els.fontSize.disabled = !enabled;
+    var controlsEnabled = hasPhoto;
+    els.textValue.disabled = !controlsEnabled;
+    els.fontSize.disabled = !controlsEnabled;
     els.deleteTextBtn.disabled = !enabled;
     Array.prototype.forEach.call(els.colorControls.children, function (button) {
-      button.disabled = !enabled;
-      button.classList.toggle("active", enabled && normalizeColor(obj.fill) === normalizeColor(button.dataset.color));
+      var activeColor = enabled ? obj.fill : state.draftText.color;
+      button.disabled = !controlsEnabled;
+      button.classList.toggle("active", controlsEnabled && normalizeColor(activeColor) === normalizeColor(button.dataset.color));
     });
     Array.prototype.forEach.call(els.backgroundControls.querySelectorAll("button"), function (button) {
-      button.disabled = !enabled;
-      button.classList.toggle("active", enabled && (getTextModel(obj.textId).background || "none") === button.dataset.bg);
+      var activeBackground = enabled ? getTextModel(obj.textId).background || "none" : state.draftText.background;
+      button.disabled = !controlsEnabled;
+      button.classList.toggle("active", controlsEnabled && activeBackground === button.dataset.bg);
     });
     if (!enabled) {
-      els.textValue.value = "";
+      els.textValue.value = state.draftText.value;
+      els.fontSize.value = String(state.draftText.fontSizePercent);
+      els.fontSizeValue.textContent = formatPercent(state.draftText.fontSizePercent);
+      els.textValue.placeholder = hasPhoto ? "Type text to add" : "Open a photo to add text";
       return;
     }
     var sizePercent = (obj.fontSize / canvas.getWidth()) * 100;
     els.textValue.value = obj.text || "";
+    els.textValue.placeholder = "Edit selected text";
     els.fontSize.value = String(Math.max(2, Math.min(12, sizePercent)));
-    els.fontSizeValue.textContent = sizePercent.toFixed(1).replace(".0", "") + "%";
+    els.fontSizeValue.textContent = formatPercent(sizePercent);
   }
 
   function applyTextColor(color) {
     var obj = getActiveTextObject();
-    if (!obj) return;
+    if (!obj) {
+      state.draftText.color = color;
+      updateTextControls();
+      return;
+    }
     obj.set("fill", color);
+    state.draftText.color = color;
     canvas.requestRenderAll();
     syncObjectToModel(obj);
     updateTextControls();
@@ -515,12 +542,30 @@
 
   function applyBackground(bg) {
     var obj = getActiveTextObject();
-    if (!obj) return;
+    if (!obj) {
+      state.draftText.background = bg;
+      updateTextControls();
+      return;
+    }
     obj.set("backgroundColor", BG_COLORS[bg] || "");
+    state.draftText.background = bg;
     canvas.requestRenderAll();
     syncObjectToModel(obj);
     getTextModel(obj.textId).background = bg;
     updateTextControls();
+  }
+
+  function readDraftFromControls() {
+    return {
+      value: els.textValue.value.trim(),
+      fontSizePercent: Number(els.fontSize.value) || state.draftText.fontSizePercent,
+      color: state.draftText.color,
+      background: state.draftText.background
+    };
+  }
+
+  function formatPercent(value) {
+    return Number(value).toFixed(1).replace(".0", "") + "%";
   }
 
   function deleteActiveText() {
