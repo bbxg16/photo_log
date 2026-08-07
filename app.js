@@ -428,9 +428,11 @@
   function loadEditorPhoto(photo) {
     if (!photo) return;
     var loadToken = ++editorLoadToken;
+    var isDifferentPhoto = currentPhotoId !== photo.id;
     currentPhotoId = photo.id;
     editorReady = false;
     state.activeTextId = null;
+    if (isDifferentPhoto) resetDraftText();
     suppressObjectSync = true;
     canvas.discardActiveObject();
     canvas.clear();
@@ -485,9 +487,9 @@
       fontFamily: 'Arial, "PingFang SC", "Microsoft YaHei", sans-serif',
       editable: true,
       padding: 6,
-      borderColor: "#b517ff",
-      cornerColor: "#ff4fa3",
-      editingBorderColor: "#b517ff",
+      borderColor: "#1769ff",
+      cornerColor: "#11a8ff",
+      editingBorderColor: "#1769ff",
       hasControls: true,
       lockScalingX: false,
       lockScalingY: true,
@@ -516,7 +518,7 @@
     var draft = readDraftFromControls();
     var text = {
       id: makeId(),
-      value: draft.value || "Text",
+      value: draft.value || "Add text",
       x: 0.1,
       y: 0.1,
       widthRatio: 0.2,
@@ -657,6 +659,10 @@
 
   function formatPercent(value) {
     return Number(value).toFixed(1).replace(".0", "") + "%";
+  }
+
+  function resetDraftText() {
+    state.draftText.value = "";
   }
 
   function deleteActiveText() {
