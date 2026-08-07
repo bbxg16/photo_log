@@ -188,6 +188,14 @@
       syncObjectToModel(event.target);
       updateTextControls();
     });
+    canvas.on("mouse:dblclick", function (event) {
+      if (!isTextObject(event.target)) return;
+      canvas.setActiveObject(event.target);
+      event.target.enterEditing();
+      event.target.hiddenTextarea && event.target.hiddenTextarea.focus();
+      state.activeTextId = event.target.textId;
+      updateTextControls();
+    });
     canvas.on("mouse:down", function () {
       els.canvasWrap.classList.add("dragging");
     });
@@ -228,6 +236,7 @@
       try {
         var photo = await createPhotoRecord(accepted[i]);
         state.photos.push(photo);
+        if (state.photos.length === 1) showScreen("galleryScreen");
       } catch (error) {
         console.error(error);
         showToast("Could not import " + accepted[i].name + ".");
@@ -236,7 +245,7 @@
       updateUi();
       await pause();
     }
-    showScreen("galleryScreen");
+    if (state.photos.length) showScreen("galleryScreen");
     showToast("Import complete.");
   }
 
@@ -406,6 +415,7 @@
     currentPhotoId = photo.id;
     state.activeTextId = null;
     suppressObjectSync = true;
+    canvas.discardActiveObject();
     canvas.clear();
     var fitted = getFittedSize(photo.width, photo.height);
     canvas.setWidth(fitted.width);
@@ -457,6 +467,7 @@
       padding: 6,
       borderColor: "#0f766e",
       cornerColor: "#0f766e",
+      editingBorderColor: "#0f766e",
       hasControls: false,
       lockScalingX: true,
       lockScalingY: true,
@@ -486,6 +497,7 @@
     canvas.add(obj);
     canvas.setActiveObject(obj);
     obj.enterEditing();
+    obj.hiddenTextarea && obj.hiddenTextarea.focus();
     obj.selectAll();
     handleSelection({ selected: [obj] });
     canvas.requestRenderAll();
