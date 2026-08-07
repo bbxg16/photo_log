@@ -13,12 +13,6 @@
           <h1>Photo Log Editor</h1>
           <p id="statusText">No photos imported</p>
         </div>
-        <nav class="tabs" aria-label="Main screens">
-          <button class="tab active" data-screen="importScreen">Import</button>
-          <button class="tab" data-screen="galleryScreen">Gallery</button>
-          <button class="tab" data-screen="editorScreen">Editor</button>
-          <button class="tab" data-screen="stitchScreen">Stitch</button>
-        </nav>
       </header>
 
       <main>
@@ -35,11 +29,10 @@
         </section>
 
         <section id="galleryScreen" class="screen">
-          <div class="workspace-actions">
+          <div class="workspace-actions bottom-actions">
             <button id="addMoreBtn">Add Photos</button>
             <button id="editSelectedBtn" class="primary-btn">Edit Selected</button>
             <button id="goStitchBtn">Skip To Stitch</button>
-            <button id="removeSelectedBtn">Remove Selected</button>
             <button id="clearBtn" class="danger-btn">Clear Session</button>
           </div>
           <div class="selection-line">
@@ -54,7 +47,6 @@
             <button id="prevPhotoBtn" aria-label="Previous photo">Previous</button>
             <span id="editorPosition">0 / 0</span>
             <button id="nextPhotoBtn" aria-label="Next photo">Next</button>
-            <button id="finishEditingBtn">Continue To Stitch</button>
           </div>
 
           <div class="editor-layout">
@@ -63,8 +55,6 @@
             </div>
 
             <aside class="text-panel">
-              <label class="field-label" for="textValue">Text</label>
-              <textarea id="textValue" rows="2" placeholder="Type text to add"></textarea>
               <button id="addTextBtn" class="primary-btn wide">Add</button>
 
               <label class="field-label" for="fontSize">Font size</label>
@@ -84,6 +74,7 @@
               </div>
 
               <button id="deleteTextBtn" class="danger-btn wide">Delete Text Box</button>
+              <button id="finishEditingBtn" class="wide">Continue To Stitch</button>
             </aside>
           </div>
         </section>

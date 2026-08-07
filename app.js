@@ -28,7 +28,6 @@
     activeTextId: null,
     stitchIds: [],
     draftText: {
-      value: "",
       fontSizePercent: 5,
       color: "#ffffff",
       background: "none"
@@ -65,7 +64,6 @@
       "addMoreBtn",
       "editSelectedBtn",
       "goStitchBtn",
-      "removeSelectedBtn",
       "clearBtn",
       "prevPhotoBtn",
       "nextPhotoBtn",
@@ -74,7 +72,6 @@
       "finishEditingBtn",
       "canvasWrap",
       "photoCanvas",
-      "textValue",
       "fontSize",
       "fontSizeValue",
       "colorControls",
@@ -87,7 +84,6 @@
     ].forEach(function (id) {
       els[id] = document.getElementById(id);
     });
-    els.tabs = Array.prototype.slice.call(document.querySelectorAll(".tab"));
     els.screens = Array.prototype.slice.call(document.querySelectorAll(".screen"));
   }
 
@@ -116,15 +112,8 @@
       addFiles(Array.prototype.slice.call(event.dataTransfer.files || []));
     });
 
-    els.tabs.forEach(function (tab) {
-      tab.addEventListener("click", function () {
-        showScreen(tab.dataset.screen);
-      });
-    });
-
     els.editSelectedBtn.addEventListener("click", openEditorForSelection);
     els.goStitchBtn.addEventListener("click", goToStitch);
-    els.removeSelectedBtn.addEventListener("click", removeSelectedPhotos);
     els.clearBtn.addEventListener("click", clearSession);
     els.prevPhotoBtn.addEventListener("click", function () {
       moveEditor(-1);
@@ -137,17 +126,6 @@
     els.finishEditingBtn.addEventListener("click", goToStitch);
     els.exportStitchBtn.addEventListener("click", exportStitch);
 
-    els.textValue.addEventListener("input", function () {
-      var obj = getActiveTextObject();
-      if (!obj) {
-        state.draftText.value = els.textValue.value;
-        return;
-      }
-      obj.set("text", els.textValue.value);
-      if (shouldAutoFit(obj)) fitTextWidth(obj);
-      canvas.requestRenderAll();
-      syncObjectToModel(obj);
-    });
     els.fontSize.addEventListener("input", function () {
       var obj = getActiveTextObject();
       var percent = Number(els.fontSize.value);
@@ -372,7 +350,6 @@
     els.photoCount.textContent = state.photos.length + " photo" + (state.photos.length === 1 ? "" : "s");
     els.selectedCount.textContent = selected + " selected for text";
     els.editSelectedBtn.disabled = selected === 0;
-    els.removeSelectedBtn.disabled = selected === 0;
     els.addMoreBtn.disabled = state.photos.length >= MAX_PHOTOS;
     els.goStitchBtn.disabled = state.photos.length === 0;
     els.prevPhotoBtn.disabled = state.editorIds.length < 2;
@@ -388,9 +365,6 @@
   function showScreen(screenId) {
     els.screens.forEach(function (screen) {
       screen.classList.toggle("active", screen.id === screenId);
-    });
-    els.tabs.forEach(function (tab) {
-      tab.classList.toggle("active", tab.dataset.screen === screenId);
     });
     if (screenId === "stitchScreen") prepareStitchFromUploaded();
     if (screenId === "editorScreen" && !currentPhotoId && state.editorIds.length) {
@@ -428,11 +402,9 @@
   function loadEditorPhoto(photo) {
     if (!photo) return;
     var loadToken = ++editorLoadToken;
-    var isDifferentPhoto = currentPhotoId !== photo.id;
     currentPhotoId = photo.id;
     editorReady = false;
     state.activeTextId = null;
-    if (isDifferentPhoto) resetDraftText();
     suppressObjectSync = true;
     canvas.discardActiveObject();
     canvas.clear();
@@ -518,7 +490,7 @@
     var draft = readDraftFromControls();
     var text = {
       id: makeId(),
-      value: draft.value || "Add text",
+      value: "Add text",
       x: 0.1,
       y: 0.1,
       widthRatio: 0.2,
@@ -561,7 +533,6 @@
     var hasPhoto = Boolean(currentPhotoId);
     var enabled = Boolean(obj);
     var controlsEnabled = hasPhoto && editorReady;
-    els.textValue.disabled = !controlsEnabled;
     els.fontSize.disabled = !controlsEnabled;
     els.deleteTextBtn.disabled = !enabled;
     Array.prototype.forEach.call(els.colorControls.children, function (button) {
@@ -575,15 +546,11 @@
       button.classList.toggle("active", controlsEnabled && activeBackground === button.dataset.bg);
     });
     if (!enabled) {
-      els.textValue.value = state.draftText.value;
       els.fontSize.value = String(state.draftText.fontSizePercent);
       els.fontSizeValue.textContent = formatPercent(state.draftText.fontSizePercent);
-      els.textValue.placeholder = hasPhoto ? "Type text to add" : "Open a photo to add text";
       return;
     }
     var sizePercent = (obj.fontSize / canvas.getWidth()) * 100;
-    els.textValue.value = obj.text || "";
-    els.textValue.placeholder = "Edit selected text";
     els.fontSize.value = String(Math.max(2, Math.min(12, sizePercent)));
     els.fontSizeValue.textContent = formatPercent(sizePercent);
   }
@@ -650,7 +617,6 @@
 
   function readDraftFromControls() {
     return {
-      value: els.textValue.value.trim(),
       fontSizePercent: Number(els.fontSize.value) || state.draftText.fontSizePercent,
       color: state.draftText.color,
       background: state.draftText.background
@@ -659,10 +625,6 @@
 
   function formatPercent(value) {
     return Number(value).toFixed(1).replace(".0", "") + "%";
-  }
-
-  function resetDraftText() {
-    state.draftText.value = "";
   }
 
   function deleteActiveText() {
@@ -738,8 +700,10 @@
       var item = document.createElement("div");
       item.className = "stitch-item";
       item.dataset.id = id;
-      item.innerHTML = '<img alt="" src="' + photo.thumbUrl + '"><strong></strong><span class="drag-handle">☰</span>';
+      item.innerHTML = '<span class="order-badge"></span><img alt="" src="' + photo.thumbUrl + '"><div class="stitch-meta"><strong></strong><span></span></div><button class="drag-handle" type="button" aria-label="Drag to reorder">☰</button>';
+      item.querySelector(".order-badge").textContent = String(state.stitchIds.indexOf(id) + 1);
       item.querySelector("strong").textContent = photo.name;
+      item.querySelector(".stitch-meta span").textContent = Math.round(photo.width) + " x " + Math.round(photo.height);
       els.stitchList.appendChild(item);
     });
     if (window.Sortable && !els.stitchList.sortableInstance) {
@@ -750,10 +714,18 @@
           state.stitchIds = Array.prototype.slice.call(els.stitchList.children).map(function (item) {
             return item.dataset.id;
           });
+          refreshStitchOrderBadges();
           updateStitchCount();
         }
       });
     }
+  }
+
+  function refreshStitchOrderBadges() {
+    Array.prototype.forEach.call(els.stitchList.children, function (item, index) {
+      var badge = item.querySelector(".order-badge");
+      if (badge) badge.textContent = String(index + 1);
+    });
   }
 
   async function exportStitch() {
@@ -874,30 +846,6 @@
       lines.push(current);
     });
     return lines.length ? lines : [""];
-  }
-
-  function removeSelectedPhotos() {
-    var ids = new Set(state.selectedIds);
-    state.photos = state.photos.filter(function (photo) {
-      if (!ids.has(photo.id)) return true;
-      revokePhoto(photo);
-      return false;
-    });
-    state.selectedIds.clear();
-    state.editorIds = state.editorIds.filter(function (id) {
-      return !ids.has(id);
-    });
-    state.stitchIds = state.stitchIds.filter(function (id) {
-      return !ids.has(id);
-    });
-    if (ids.has(currentPhotoId)) {
-      currentPhotoId = null;
-      canvas.clear();
-    }
-    renderGallery();
-    renderStitchList();
-    updateUi();
-    if (!state.photos.length) showScreen("importScreen");
   }
 
   function clearSession() {
