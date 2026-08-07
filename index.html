@@ -44,14 +44,14 @@
 
         <section id="editorScreen" class="screen editor-screen">
           <div class="editor-toolbar">
-            <button id="prevPhotoBtn" aria-label="Previous photo">Previous</button>
             <span id="editorPosition">0 / 0</span>
-            <button id="nextPhotoBtn" aria-label="Next photo">Next</button>
           </div>
 
           <div class="editor-layout">
             <div id="canvasWrap" class="canvas-wrap">
+              <button id="prevPhotoBtn" class="image-nav prev" aria-label="Previous photo">Previous</button>
               <canvas id="photoCanvas"></canvas>
+              <button id="nextPhotoBtn" class="image-nav next" aria-label="Next photo">Next</button>
             </div>
 
             <aside class="text-panel">
@@ -80,14 +80,14 @@
         </section>
 
         <section id="stitchScreen" class="screen">
-          <div class="workspace-actions">
-            <button id="exportStitchBtn" class="primary-btn">Download Stitched Image</button>
-          </div>
           <div class="selection-line">
             <strong id="stitchCount">0 images</strong>
             <span>Drag to reorder all uploaded images before downloading.</span>
           </div>
           <div id="stitchList" class="stitch-list"></div>
+          <div class="stitch-download">
+            <button id="exportStitchBtn" class="primary-btn">Download Stitched Image</button>
+          </div>
         </section>
       </main>
     </div>
