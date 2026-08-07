@@ -1,8 +1,7 @@
 (function () {
   "use strict";
 
-  var MAX_PHOTOS = 81;
-  var MAX_STITCH = 9;
+  var MAX_PHOTOS = 9;
   var JPEG_QUALITY = 0.96;
   var STITCH_TARGET_WIDTH = 2160;
   var MAX_STITCH_PIXELS = 32000000;
@@ -63,13 +62,14 @@
       "selectedCount",
       "addMoreBtn",
       "editSelectedBtn",
+      "goStitchBtn",
       "removeSelectedBtn",
       "clearBtn",
       "prevPhotoBtn",
       "nextPhotoBtn",
       "editorPosition",
       "addTextBtn",
-      "exportCurrentBtn",
+      "finishEditingBtn",
       "canvasWrap",
       "photoCanvas",
       "textValue",
@@ -78,8 +78,6 @@
       "colorControls",
       "backgroundControls",
       "deleteTextBtn",
-      "exportSelectedBtn",
-      "refreshStitchBtn",
       "exportStitchBtn",
       "stitchCount",
       "stitchList",
@@ -123,6 +121,7 @@
     });
 
     els.editSelectedBtn.addEventListener("click", openEditorForSelection);
+    els.goStitchBtn.addEventListener("click", goToStitch);
     els.removeSelectedBtn.addEventListener("click", removeSelectedPhotos);
     els.clearBtn.addEventListener("click", clearSession);
     els.prevPhotoBtn.addEventListener("click", function () {
@@ -133,9 +132,7 @@
     });
     els.addTextBtn.addEventListener("click", addTextBox);
     els.deleteTextBtn.addEventListener("click", deleteActiveText);
-    els.exportCurrentBtn.addEventListener("click", exportCurrentPhoto);
-    els.exportSelectedBtn.addEventListener("click", exportSelectedZip);
-    els.refreshStitchBtn.addEventListener("click", useSelectedForStitch);
+    els.finishEditingBtn.addEventListener("click", goToStitch);
     els.exportStitchBtn.addEventListener("click", exportStitch);
 
     els.textValue.addEventListener("input", function () {
@@ -218,7 +215,7 @@
   async function addFiles(files) {
     var room = MAX_PHOTOS - state.photos.length;
     if (room <= 0) {
-      showToast("The session already has 81 photos.");
+      showToast("The session already has 9 photos.");
       return;
     }
     var accepted = files.filter(isSupportedImage).slice(0, room);
@@ -330,6 +327,14 @@
       });
       els.gallery.appendChild(button);
     });
+    for (var slot = state.photos.length; slot < MAX_PHOTOS; slot += 1) {
+      var empty = document.createElement("button");
+      empty.type = "button";
+      empty.className = "thumb empty";
+      empty.disabled = true;
+      empty.textContent = "Slot " + (slot + 1);
+      els.gallery.appendChild(empty);
+    }
   }
 
   function togglePhotoSelection(id) {
@@ -341,17 +346,17 @@
 
   function updateUi() {
     var selected = state.selectedIds.size;
-    els.statusText.textContent = state.photos.length + " / 81 photos imported";
+    els.statusText.textContent = state.photos.length + " / 9 photos imported";
     els.photoCount.textContent = state.photos.length + " photo" + (state.photos.length === 1 ? "" : "s");
-    els.selectedCount.textContent = selected + " selected";
+    els.selectedCount.textContent = selected + " selected for text";
     els.editSelectedBtn.disabled = selected === 0;
     els.removeSelectedBtn.disabled = selected === 0;
-    els.exportSelectedBtn.disabled = selected === 0;
     els.addMoreBtn.disabled = state.photos.length >= MAX_PHOTOS;
+    els.goStitchBtn.disabled = state.photos.length === 0;
     els.prevPhotoBtn.disabled = state.editorIds.length < 2;
     els.nextPhotoBtn.disabled = state.editorIds.length < 2;
     els.addTextBtn.disabled = !currentPhotoId;
-    els.exportCurrentBtn.disabled = !currentPhotoId;
+    els.finishEditingBtn.disabled = state.photos.length === 0;
     els.clearBtn.disabled = state.photos.length === 0;
     updateEditorPosition();
     updateStitchCount();
@@ -365,8 +370,16 @@
     els.tabs.forEach(function (tab) {
       tab.classList.toggle("active", tab.dataset.screen === screenId);
     });
-    if (screenId === "stitchScreen") useSelectedForStitch(false);
+    if (screenId === "stitchScreen") prepareStitchFromUploaded();
     if (screenId === "editorScreen" && !currentPhotoId && state.photos.length) openEditorForSelection();
+  }
+
+  function goToStitch() {
+    if (!state.photos.length) {
+      showToast("Upload at least one photo first.");
+      return;
+    }
+    showScreen("stitchScreen");
   }
 
   function openEditorForSelection() {
@@ -612,67 +625,24 @@
     });
   }
 
-  async function exportCurrentPhoto() {
-    var photo = getPhoto(currentPhotoId);
-    if (!photo) return;
-    showToast("Rendering full-resolution image...");
-    var blob = await renderPhotoToBlob(photo, photo.width);
-    downloadBlob(blob, baseName(photo.name) + "-edited.jpg");
-    showToast("Exported current image.");
-  }
-
-  async function exportSelectedZip() {
-    var ids = Array.from(state.selectedIds);
-    if (!ids.length) {
-      showToast("Select photos to export.");
-      return;
-    }
-    if (!window.JSZip) {
-      showToast("ZIP library is unavailable.");
-      return;
-    }
-    var zip = new JSZip();
-    showToast("Rendering " + ids.length + " selected image" + (ids.length === 1 ? "" : "s") + "...");
-    for (var i = 0; i < ids.length; i += 1) {
-      var photo = getPhoto(ids[i]);
-      var blob = await renderPhotoToBlob(photo, photo.width);
-      zip.file(pad(i + 1) + "-" + baseName(photo.name) + "-edited.jpg", blob);
-      await pause();
-    }
-    var zipBlob = await zip.generateAsync({ type: "blob" });
-    downloadBlob(zipBlob, "photo-log-edits.zip");
-    showToast("Exported selected ZIP.");
-  }
-
-  function useSelectedForStitch(showMessages) {
-    var ids = Array.from(state.selectedIds);
-    if (ids.length > MAX_STITCH) {
-      if (showMessages !== false) showToast("Select 9 or fewer photos for stitching.");
-      state.stitchIds = ids;
-    } else {
-      var currentSet = new Set(ids);
-      state.stitchIds = state.stitchIds.filter(function (id) {
-        return currentSet.has(id);
-      });
-      ids.forEach(function (id) {
-        if (state.stitchIds.indexOf(id) === -1) state.stitchIds.push(id);
-      });
-    }
+  function prepareStitchFromUploaded() {
+    var uploadedIds = state.photos.map(function (photo) {
+      return photo.id;
+    });
+    var uploadedSet = new Set(uploadedIds);
+    state.stitchIds = state.stitchIds.filter(function (id) {
+      return uploadedSet.has(id);
+    });
+    uploadedIds.forEach(function (id) {
+      if (state.stitchIds.indexOf(id) === -1) state.stitchIds.push(id);
+    });
     renderStitchList();
     updateUi();
   }
 
   function renderStitchList() {
     els.stitchList.innerHTML = "";
-    var overLimit = state.stitchIds.length > MAX_STITCH;
-    var idsToRender = overLimit ? [] : state.stitchIds;
-    if (overLimit) {
-      var warning = document.createElement("div");
-      warning.className = "limit-warning";
-      warning.textContent = "Select 9 or fewer photos to build a stitched image.";
-      els.stitchList.appendChild(warning);
-    }
-    idsToRender.forEach(function (id) {
+    state.stitchIds.forEach(function (id) {
       var photo = getPhoto(id);
       if (!photo) return;
       var item = document.createElement("div");
@@ -697,13 +667,9 @@
   }
 
   async function exportStitch() {
-    useSelectedForStitch(false);
-    if (state.stitchIds.length > MAX_STITCH) {
-      showToast("Select 9 or fewer photos for stitching.");
-      return;
-    }
+    prepareStitchFromUploaded();
     if (!state.stitchIds.length) {
-      showToast("Select up to 9 photos first.");
+      showToast("Upload at least one photo first.");
       return;
     }
     var photos = state.stitchIds.map(getPhoto).filter(Boolean);
@@ -737,7 +703,7 @@
         showToast("Stitch export failed.");
         return;
       }
-      downloadBlob(blob, "stitched-photo-log.jpg");
+      downloadBlob(blob, "photo-log-stitched.jpg");
       showToast("Exported stitched image.");
     }, "image/jpeg", JPEG_QUALITY);
   }
@@ -873,8 +839,8 @@
   }
 
   function updateStitchCount() {
-    els.stitchCount.textContent = state.stitchIds.length + " / 9 selected";
-    els.exportStitchBtn.disabled = state.stitchIds.length === 0 || state.stitchIds.length > MAX_STITCH;
+    els.stitchCount.textContent = state.stitchIds.length + " image" + (state.stitchIds.length === 1 ? "" : "s");
+    els.exportStitchBtn.disabled = state.stitchIds.length === 0;
   }
 
   function getPhoto(id) {
@@ -927,14 +893,6 @@
     setTimeout(function () {
       URL.revokeObjectURL(url);
     }, 1000);
-  }
-
-  function baseName(name) {
-    return name.replace(/\.[^.]+$/, "").replace(/[^\w.-]+/g, "-") || "photo";
-  }
-
-  function pad(number) {
-    return String(number).padStart(2, "0");
   }
 
   function makeId() {

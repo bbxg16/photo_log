@@ -183,8 +183,9 @@ main {
 
 .gallery {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(116px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
+  max-width: 720px;
 }
 
 .thumb {
@@ -199,6 +200,14 @@ main {
 
 .thumb.selected {
   border-color: var(--accent);
+}
+
+.thumb.empty {
+  display: grid;
+  place-items: center;
+  border: 1px dashed #b8c3cf;
+  color: var(--muted);
+  cursor: default;
 }
 
 .thumb img {
@@ -449,6 +458,6 @@ input[type="range"] {
   }
 
   .gallery {
-    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
