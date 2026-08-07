@@ -48,33 +48,41 @@
           </div>
 
           <div class="editor-layout">
-            <div id="canvasWrap" class="canvas-wrap">
-              <button id="prevPhotoBtn" class="image-nav prev" aria-label="Previous photo">Previous</button>
-              <canvas id="photoCanvas"></canvas>
-              <button id="nextPhotoBtn" class="image-nav next" aria-label="Next photo">Next</button>
+            <div class="editor-stage">
+              <div id="canvasWrap" class="canvas-wrap">
+                <canvas id="photoCanvas"></canvas>
+              </div>
+              <div class="photo-nav-row">
+                <button id="prevPhotoBtn" aria-label="Previous photo">Previous</button>
+                <button id="nextPhotoBtn" aria-label="Next photo">Next</button>
+              </div>
             </div>
 
             <aside class="text-panel">
-              <button id="addTextBtn" class="primary-btn wide">Add</button>
+              <div class="text-edit-controls">
+                <button id="addTextBtn" class="primary-btn wide">Add</button>
 
-              <label class="field-label" for="fontSize">Font size</label>
-              <div class="range-row">
-                <input id="fontSize" type="range" min="2" max="12" value="5" step="0.2" />
-                <span id="fontSizeValue">5%</span>
+                <label class="field-label" for="fontSize">Font size</label>
+                <div class="range-row">
+                  <input id="fontSize" type="range" min="2" max="12" value="5" step="0.2" />
+                  <span id="fontSizeValue">5%</span>
+                </div>
+
+                <div class="field-label">Text color</div>
+                <div id="colorControls" class="swatches"></div>
+
+                <div class="field-label">Background</div>
+                <div id="backgroundControls" class="segmented">
+                  <button data-bg="none" class="active">None</button>
+                  <button data-bg="white">White</button>
+                  <button data-bg="black">Black</button>
+                </div>
               </div>
 
-              <div class="field-label">Text color</div>
-              <div id="colorControls" class="swatches"></div>
-
-              <div class="field-label">Background</div>
-              <div id="backgroundControls" class="segmented">
-                <button data-bg="none" class="active">None</button>
-                <button data-bg="white">White</button>
-                <button data-bg="black">Black</button>
+              <div class="editor-actions">
+                <button id="deleteTextBtn" class="danger-btn wide">Delete Text Box</button>
+                <button id="finishEditingBtn" class="wide">Continue To Stitch</button>
               </div>
-
-              <button id="deleteTextBtn" class="danger-btn wide">Delete Text Box</button>
-              <button id="finishEditingBtn" class="wide">Continue To Stitch</button>
             </aside>
           </div>
         </section>

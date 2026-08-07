@@ -290,6 +290,11 @@ main {
   position: relative;
 }
 
+.editor-stage {
+  display: grid;
+  gap: 10px;
+}
+
 .canvas-wrap {
   position: relative;
   display: grid;
@@ -307,8 +312,14 @@ main {
   max-width: 100%;
 }
 
-.image-nav {
-  display: none;
+.photo-nav-row {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.photo-nav-row button {
+  min-width: 120px;
 }
 
 .canvas-container,
@@ -325,6 +336,17 @@ main {
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.9);
   box-shadow: var(--shadow);
+}
+
+.text-edit-controls,
+.editor-actions {
+  display: grid;
+  gap: 12px;
+}
+
+.editor-actions {
+  padding-top: 12px;
+  border-top: 1px solid rgba(185, 221, 255, 0.92);
 }
 
 .field-label {
@@ -515,62 +537,31 @@ input[type="range"] {
     box-shadow: 0 6px 16px rgba(23, 105, 255, 0.12);
   }
 
-  .image-nav {
-    display: grid;
-    position: absolute;
-    top: 50%;
-    z-index: 14;
-    width: 44px;
-    min-height: 52px;
-    padding: 0;
-    overflow: hidden;
-    transform: translateY(-50%);
-    color: transparent;
-    border-color: rgba(255, 255, 255, 0.74);
-    background: rgba(23, 105, 255, 0.86);
-    box-shadow: 0 10px 24px rgba(16, 35, 63, 0.2);
-  }
-
-  .image-nav.prev {
-    left: 8px;
-  }
-
-  .image-nav.next {
-    right: 8px;
-  }
-
-  .image-nav::before {
-    display: block;
-    color: #fff;
-    font-size: 28px;
-    line-height: 1;
-  }
-
-  .image-nav.prev::before {
-    content: "<";
-  }
-
-  .image-nav.next::before {
-    content: ">";
-  }
-
   .editor-layout {
     grid-template-columns: 1fr;
     gap: 8px;
   }
 
   .canvas-wrap {
-    min-height: 46vh;
-    max-height: 52vh;
+    min-height: 42vh;
+    max-height: 48vh;
+  }
+
+  .photo-nav-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .photo-nav-row button {
+    min-width: 0;
+    min-height: 36px;
   }
 
   .text-panel {
     position: sticky;
     bottom: 0;
     z-index: 10;
-    display: grid;
-    grid-template-columns: 0.8fr 1.3fr;
-    gap: 8px;
     margin-inline: -14px;
     max-height: 34vh;
     overflow: auto;
@@ -578,6 +569,19 @@ input[type="range"] {
     border-inline: 0;
     border-bottom: 0;
     border-radius: 8px 8px 0 0;
+  }
+
+  .text-edit-controls {
+    display: grid;
+    grid-template-columns: 0.72fr 1.35fr;
+    gap: 7px;
+  }
+
+  .editor-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding-top: 8px;
   }
 
   .text-panel .field-label {
@@ -593,10 +597,17 @@ input[type="range"] {
   #deleteTextBtn,
   #finishEditingBtn {
     min-height: 36px;
+    padding: 0 8px;
+  }
+
+  #deleteTextBtn,
+  #finishEditingBtn {
+    font-size: 14px;
   }
 
   #addTextBtn {
     grid-column: 1;
+    grid-row: 1;
   }
 
   .range-row {
@@ -627,11 +638,11 @@ input[type="range"] {
   }
 
   #deleteTextBtn {
-    grid-column: 1;
+    grid-column: auto;
   }
 
   #finishEditingBtn {
-    grid-column: 2;
+    grid-column: auto;
   }
 
   .bottom-actions {
