@@ -38,6 +38,8 @@
   var els = {};
   var canvas = null;
   var currentPhotoId = null;
+  var editorReady = false;
+  var editorLoadToken = 0;
   var suppressObjectSync = false;
   var toastTimer = null;
 
@@ -142,6 +144,7 @@
         return;
       }
       obj.set("text", els.textValue.value);
+      if (shouldAutoFit(obj)) fitTextWidth(obj);
       canvas.requestRenderAll();
       syncObjectToModel(obj);
     });
@@ -154,6 +157,7 @@
         return;
       }
       obj.set("fontSize", canvas.getWidth() * (percent / 100));
+      if (shouldAutoFit(obj)) fitTextWidth(obj);
       state.draftText.fontSizePercent = percent;
       canvas.requestRenderAll();
       syncObjectToModel(obj);
@@ -184,7 +188,16 @@
     });
     canvas.on("object:moving", clampAndSyncObject);
     canvas.on("object:modified", clampAndSyncObject);
+    canvas.on("object:scaling", function (event) {
+      var obj = event.target;
+      if (!isTextObject(obj)) return;
+      var model = getTextModel(obj.textId);
+      if (model) model.autoFit = false;
+      clampAndSyncObject(event);
+    });
     canvas.on("text:changed", function (event) {
+      var model = getTextModel(event.target.textId);
+      if (!model || model.autoFit !== false) fitTextWidth(event.target);
       syncObjectToModel(event.target);
       updateTextControls();
     });
@@ -364,7 +377,7 @@
     els.goStitchBtn.disabled = state.photos.length === 0;
     els.prevPhotoBtn.disabled = state.editorIds.length < 2;
     els.nextPhotoBtn.disabled = state.editorIds.length < 2;
-    els.addTextBtn.disabled = !currentPhotoId;
+    els.addTextBtn.disabled = !currentPhotoId || !editorReady;
     els.finishEditingBtn.disabled = state.photos.length === 0;
     els.clearBtn.disabled = state.photos.length === 0;
     updateEditorPosition();
@@ -380,7 +393,9 @@
       tab.classList.toggle("active", tab.dataset.screen === screenId);
     });
     if (screenId === "stitchScreen") prepareStitchFromUploaded();
-    if (screenId === "editorScreen" && !currentPhotoId && state.photos.length) openEditorForSelection();
+    if (screenId === "editorScreen" && !currentPhotoId && state.editorIds.length) {
+      loadEditorPhoto(getPhoto(state.editorIds[state.editorIndex]));
+    }
   }
 
   function goToStitch() {
@@ -400,8 +415,8 @@
     }
     state.editorIds = ids;
     state.editorIndex = 0;
+    currentPhotoId = null;
     showScreen("editorScreen");
-    loadEditorPhoto(getPhoto(state.editorIds[0]));
   }
 
   function moveEditor(delta) {
@@ -412,15 +427,19 @@
 
   function loadEditorPhoto(photo) {
     if (!photo) return;
+    var loadToken = ++editorLoadToken;
     currentPhotoId = photo.id;
+    editorReady = false;
     state.activeTextId = null;
     suppressObjectSync = true;
     canvas.discardActiveObject();
     canvas.clear();
+    updateUi();
     var fitted = getFittedSize(photo.width, photo.height);
     canvas.setWidth(fitted.width);
     canvas.setHeight(fitted.height);
     fabric.Image.fromURL(photo.sourceUrl, function (img) {
+      if (loadToken !== editorLoadToken) return;
       img.set({
         left: 0,
         top: 0,
@@ -434,9 +453,10 @@
           canvas.add(createFabricText(text));
         });
         suppressObjectSync = false;
+        editorReady = true;
         canvas.requestRenderAll();
         updateEditorPosition();
-        updateTextControls();
+        updateUi();
       });
     }, { crossOrigin: "anonymous" });
   }
@@ -465,16 +485,28 @@
       fontFamily: 'Arial, "PingFang SC", "Microsoft YaHei", sans-serif',
       editable: true,
       padding: 6,
-      borderColor: "#0f766e",
-      cornerColor: "#0f766e",
-      editingBorderColor: "#0f766e",
-      hasControls: false,
-      lockScalingX: true,
+      borderColor: "#b517ff",
+      cornerColor: "#ff4fa3",
+      editingBorderColor: "#b517ff",
+      hasControls: true,
+      lockScalingX: false,
       lockScalingY: true,
       lockRotation: true,
+      lockUniScaling: true,
       splitByGrapheme: true
     });
     obj.textId = text.id;
+    obj.setControlsVisibility({
+      mt: false,
+      mb: false,
+      ml: true,
+      mr: true,
+      tl: false,
+      tr: false,
+      bl: false,
+      br: false,
+      mtr: false
+    });
     return obj;
   }
 
@@ -487,14 +519,17 @@
       value: draft.value || "Text",
       x: 0.1,
       y: 0.1,
-      widthRatio: 0.6,
+      widthRatio: 0.2,
       fontSizeRatio: draft.fontSizePercent / 100,
       color: draft.color,
-      background: draft.background
+      background: draft.background,
+      autoFit: true
     };
     photo.texts.push(text);
     var obj = createFabricText(text);
     canvas.add(obj);
+    fitTextWidth(obj);
+    syncObjectToModel(obj);
     canvas.setActiveObject(obj);
     obj.enterEditing();
     obj.hiddenTextarea && obj.hiddenTextarea.focus();
@@ -523,7 +558,7 @@
     var obj = getActiveTextObject();
     var hasPhoto = Boolean(currentPhotoId);
     var enabled = Boolean(obj);
-    var controlsEnabled = hasPhoto;
+    var controlsEnabled = hasPhoto && editorReady;
     els.textValue.disabled = !controlsEnabled;
     els.fontSize.disabled = !controlsEnabled;
     els.deleteTextBtn.disabled = !enabled;
@@ -580,6 +615,37 @@
     updateTextControls();
   }
 
+  function fitTextWidth(obj) {
+    if (!isTextObject(obj)) return;
+    var maxWidth = Math.max(60, canvas.getWidth() - obj.left - 12);
+    var textWidth = measureTextboxTextWidth(obj);
+    var nextWidth = Math.max(32, Math.min(maxWidth, textWidth + obj.padding * 2 + 8));
+    obj.set({
+      width: nextWidth,
+      scaleX: 1
+    });
+    obj.setCoords();
+  }
+
+  function shouldAutoFit(obj) {
+    var model = getTextModel(obj.textId);
+    return !model || model.autoFit !== false;
+  }
+
+  function measureTextboxTextWidth(obj) {
+    var measureCanvas = document.createElement("canvas");
+    var ctx = measureCanvas.getContext("2d");
+    ctx.font = obj.fontSize + "px " + obj.fontFamily;
+    var lines = String(obj.text || "").split(/\n/);
+    var widest = 0;
+    lines.forEach(function (line) {
+      widest = Math.max(widest, ctx.measureText(line || " ").width);
+    });
+    measureCanvas.width = 1;
+    measureCanvas.height = 1;
+    return widest;
+  }
+
   function readDraftFromControls() {
     return {
       value: els.textValue.value.trim(),
@@ -608,6 +674,12 @@
   function clampAndSyncObject(event) {
     var obj = event.target;
     if (!isTextObject(obj)) return;
+    if (obj.scaleX !== 1) {
+      obj.set({
+        width: Math.max(20, obj.width * obj.scaleX),
+        scaleX: 1
+      });
+    }
     var maxLeft = Math.max(0, canvas.getWidth() - obj.getScaledWidth());
     var maxTop = Math.max(0, canvas.getHeight() - obj.getScaledHeight());
     obj.set({
@@ -761,8 +833,8 @@
       var x = text.x * width;
       var y = text.y * height;
       var textWidth = Math.max(20, text.widthRatio * width);
-      var lines = wrapText(ctx, text.value || "", textWidth, fontSize);
       ctx.font = fontSize + 'px Arial, "PingFang SC", "Microsoft YaHei", sans-serif';
+      var lines = wrapText(ctx, text.value || "", textWidth, fontSize);
       ctx.textBaseline = "top";
       ctx.fillStyle = text.color || "#ffffff";
       var lineHeight = fontSize * 1.22;
