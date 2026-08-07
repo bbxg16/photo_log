@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Photo Log Editor</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <h1>Photo Log Editor</h1>
+          <p id="statusText">No photos imported</p>
+        </div>
+        <nav class="tabs" aria-label="Main screens">
+          <button class="tab active" data-screen="importScreen">Import</button>
+          <button class="tab" data-screen="galleryScreen">Gallery</button>
+          <button class="tab" data-screen="editorScreen">Editor</button>
+          <button class="tab" data-screen="stitchScreen">Stitch</button>
+        </nav>
+      </header>
+
+      <main>
+        <section id="importScreen" class="screen active">
+          <div id="dropZone" class="import-panel">
+            <input id="fileInput" class="file-input" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif" multiple />
+            <div class="import-copy">
+              <span class="import-icon">+</span>
+              <h2>Import photos</h2>
+              <p>Choose up to 81 JPG, PNG, WebP, HEIC, or HEIF images for this session.</p>
+              <button id="chooseFilesBtn" class="primary-btn">Choose Photos</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="galleryScreen" class="screen">
+          <div class="workspace-actions">
+            <button id="addMoreBtn">Add Photos</button>
+            <button id="editSelectedBtn" class="primary-btn">Edit Selected</button>
+            <button id="removeSelectedBtn">Remove Selected</button>
+            <button id="clearBtn" class="danger-btn">Clear Session</button>
+          </div>
+          <div class="selection-line">
+            <strong id="photoCount">0 photos</strong>
+            <span id="selectedCount">0 selected</span>
+          </div>
+          <div id="gallery" class="gallery" aria-live="polite"></div>
+        </section>
+
+        <section id="editorScreen" class="screen editor-screen">
+          <div class="editor-toolbar">
+            <button id="prevPhotoBtn" aria-label="Previous photo">Previous</button>
+            <span id="editorPosition">0 / 0</span>
+            <button id="nextPhotoBtn" aria-label="Next photo">Next</button>
+            <button id="addTextBtn" class="primary-btn">Add Text</button>
+            <button id="exportCurrentBtn">Export Current</button>
+          </div>
+
+          <div class="editor-layout">
+            <div id="canvasWrap" class="canvas-wrap">
+              <canvas id="photoCanvas"></canvas>
+            </div>
+
+            <aside class="text-panel">
+              <label class="field-label" for="textValue">Text</label>
+              <textarea id="textValue" rows="4" placeholder="Select or add a text box"></textarea>
+
+              <label class="field-label" for="fontSize">Font size</label>
+              <div class="range-row">
+                <input id="fontSize" type="range" min="2" max="12" value="5" step="0.2" />
+                <span id="fontSizeValue">5%</span>
+              </div>
+
+              <div class="field-label">Text color</div>
+              <div id="colorControls" class="swatches"></div>
+
+              <div class="field-label">Background</div>
+              <div id="backgroundControls" class="segmented">
+                <button data-bg="none" class="active">None</button>
+                <button data-bg="white">White</button>
+                <button data-bg="black">Black</button>
+              </div>
+
+              <button id="deleteTextBtn" class="danger-btn wide">Delete Text Box</button>
+            </aside>
+          </div>
+        </section>
+
+        <section id="stitchScreen" class="screen">
+          <div class="workspace-actions">
+            <button id="exportSelectedBtn" class="primary-btn">Export Selected ZIP</button>
+            <button id="refreshStitchBtn">Use Selected For Stitch</button>
+            <button id="exportStitchBtn">Export Stitched Image</button>
+          </div>
+          <div class="selection-line">
+            <strong id="stitchCount">0 / 9 selected</strong>
+            <span>Drag to reorder before stitching.</span>
+          </div>
+          <div id="stitchList" class="stitch-list"></div>
+        </section>
+      </main>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
