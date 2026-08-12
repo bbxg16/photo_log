@@ -8,12 +8,6 @@
   var THUMB_SIZE = 360;
   var FONT_SIZE_BASE_WIDTH = 720;
   var DEFAULT_FONT_FAMILY = 'Arial, "PingFang SC", "Microsoft YaHei", sans-serif';
-  var CROP_RATIOS = {
-    original: null,
-    "4:3": 4 / 3,
-    "1:1": 1,
-    "16:9": 16 / 9
-  };
   var TEXT_COLORS = [
     { name: "White", value: "#ffffff" },
     { name: "Black", value: "#000000" },
@@ -52,9 +46,6 @@
   var editorReady = false;
   var editorLoadToken = 0;
   var suppressObjectSync = false;
-  var cropDrag = null;
-  var cropRefreshPending = false;
-  var pinchState = null;
   var toastTimer = null;
 
   document.addEventListener("DOMContentLoaded", init);
@@ -163,11 +154,6 @@
       applyTextColor(els.moreColor.value);
     });
     els.rotateBtn.addEventListener("click", rotateCurrentPhoto);
-    Array.prototype.forEach.call(document.querySelectorAll("[data-crop-ratio]"), function (button) {
-      button.addEventListener("click", function () {
-        setCropRatio(button.dataset.cropRatio);
-      });
-    });
     els.backgroundControls.addEventListener("click", function (event) {
       var button = event.target.closest("button[data-bg]");
       if (!button) return;
@@ -177,7 +163,6 @@
     window.addEventListener("resize", debounce(function () {
       if (currentPhotoId) loadEditorPhoto(getPhoto(currentPhotoId));
     }, 180));
-    bindCropGestures();
   }
 
   function setupFabric() {
@@ -210,14 +195,10 @@
     });
     canvas.on("mouse:down", function (event) {
       els.canvasWrap.classList.add("dragging");
-      startCropDrag(event);
     });
-    canvas.on("mouse:move", dragCropImage);
     canvas.on("mouse:up", function () {
       els.canvasWrap.classList.remove("dragging");
-      cropDrag = null;
     });
-    canvas.on("mouse:wheel", wheelCropImage);
   }
 
   function buildColorControls() {
@@ -471,7 +452,6 @@
     var fitted = getFittedSize(dims.width, dims.height);
     canvas.setWidth(fitted.width);
     canvas.setHeight(fitted.height);
-    updateCropControls(photo);
     refreshEditorBackground(photo, loadToken).then(function () {
       if (loadToken !== editorLoadToken) return;
       photo.texts.forEach(function (text) {
@@ -504,7 +484,7 @@
   }
 
   function defaultTransform() {
-    return { rotation: 0, cropRatio: "original", zoom: 1, panX: 0, panY: 0 };
+    return { rotation: 0 };
   }
 
   function getTransform(photo) {
@@ -519,13 +499,7 @@
   }
 
   function getOutputDimensions(photo) {
-    var rotated = getRotatedDimensions(photo);
-    var ratioName = getTransform(photo).cropRatio || "original";
-    var ratio = CROP_RATIOS[ratioName];
-    if (!ratio) return rotated;
-    var currentRatio = rotated.width / rotated.height;
-    if (currentRatio > ratio) return { width: Math.round(rotated.height * ratio), height: rotated.height };
-    return { width: rotated.width, height: Math.round(rotated.width / ratio) };
+    return getRotatedDimensions(photo);
   }
 
   async function renderPhotoFrameDataUrl(photo, width, height, quality) {
@@ -548,16 +522,11 @@
   function drawPhotoFrame(ctx, img, photo, width, height) {
     var transform = getTransform(photo);
     var rotated = getRotatedDimensions(photo);
-    var baseScale = Math.max(width / rotated.width, height / rotated.height);
-    var zoom = Math.max(1, transform.zoom || 1);
-    var scale = baseScale * zoom;
+    var scale = Math.min(width / rotated.width, height / rotated.height);
     var drawnW = rotated.width * scale;
     var drawnH = rotated.height * scale;
-    var extraX = Math.max(0, (drawnW - width) / 2);
-    var extraY = Math.max(0, (drawnH - height) / 2);
-    clampPhotoPan(photo, width, height);
-    var x = (width - drawnW) / 2 + (transform.panX || 0) * extraX;
-    var y = (height - drawnH) / 2 + (transform.panY || 0) * extraY;
+    var x = (width - drawnW) / 2;
+    var y = (height - drawnH) / 2;
 
     ctx.save();
     ctx.translate(x + drawnW / 2, y + drawnH / 2);
@@ -583,125 +552,7 @@
     if (!photo) return;
     var transform = getTransform(photo);
     transform.rotation = normalizeRotation(transform.rotation + 90);
-    transform.panX = 0;
-    transform.panY = 0;
-    transform.zoom = 1;
     loadEditorPhoto(photo);
-  }
-
-  function setCropRatio(ratioName) {
-    var photo = getPhoto(currentPhotoId);
-    if (!photo || !Object.prototype.hasOwnProperty.call(CROP_RATIOS, ratioName)) return;
-    var transform = getTransform(photo);
-    transform.cropRatio = ratioName;
-    transform.panX = 0;
-    transform.panY = 0;
-    transform.zoom = 1;
-    loadEditorPhoto(photo);
-  }
-
-  function updateCropControls(photo) {
-    var transform = photo ? getTransform(photo) : defaultTransform();
-    els.canvasWrap.classList.toggle("crop-active", transform.cropRatio !== "original");
-    Array.prototype.forEach.call(document.querySelectorAll("[data-crop-ratio]"), function (button) {
-      button.classList.toggle("active", button.dataset.cropRatio === transform.cropRatio);
-    });
-  }
-
-  function isCropActive() {
-    var photo = getPhoto(currentPhotoId);
-    return Boolean(photo && getTransform(photo).cropRatio !== "original" && editorReady);
-  }
-
-  function startCropDrag(event) {
-    if (!isCropActive() || event.target) return;
-    var e = event.e;
-    cropDrag = { x: e.clientX, y: e.clientY };
-    e.preventDefault && e.preventDefault();
-  }
-
-  function dragCropImage(event) {
-    if (!cropDrag || !isCropActive()) return;
-    var e = event.e;
-    var photo = getPhoto(currentPhotoId);
-    var transform = getTransform(photo);
-    var dx = e.clientX - cropDrag.x;
-    var dy = e.clientY - cropDrag.y;
-    cropDrag = { x: e.clientX, y: e.clientY };
-    transform.panX += dx / Math.max(1, canvas.getWidth()) * 2;
-    transform.panY += dy / Math.max(1, canvas.getHeight()) * 2;
-    clampPhotoPan(photo, canvas.getWidth(), canvas.getHeight());
-    scheduleEditorBackgroundRefresh(photo);
-    e.preventDefault && e.preventDefault();
-  }
-
-  function scheduleEditorBackgroundRefresh(photo) {
-    if (cropRefreshPending) return;
-    cropRefreshPending = true;
-    window.requestAnimationFrame(function () {
-      cropRefreshPending = false;
-      if (photo && photo.id === currentPhotoId) refreshEditorBackground(photo);
-    });
-  }
-
-  function wheelCropImage(event) {
-    if (!isCropActive() || event.target) return;
-    var e = event.e;
-    var photo = getPhoto(currentPhotoId);
-    var transform = getTransform(photo);
-    var nextZoom = transform.zoom * (e.deltaY < 0 ? 1.06 : 0.94);
-    transform.zoom = Math.max(1, Math.min(4, nextZoom));
-    clampPhotoPan(photo, canvas.getWidth(), canvas.getHeight());
-    scheduleEditorBackgroundRefresh(photo);
-    e.preventDefault();
-    e.stopPropagation();
-  }
-
-  function bindCropGestures() {
-    var pointers = new Map();
-    els.canvasWrap.addEventListener("pointerdown", function (event) {
-      if (!isCropActive()) return;
-      pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
-      if (pointers.size === 2) {
-        var pts = Array.from(pointers.values());
-        pinchState = { distance: getPointerDistance(pts[0], pts[1]), zoom: getTransform(getPhoto(currentPhotoId)).zoom || 1 };
-      }
-    }, { passive: true });
-    els.canvasWrap.addEventListener("pointermove", function (event) {
-      if (!isCropActive() || !pointers.has(event.pointerId) || pointers.size < 2 || !pinchState) return;
-      pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
-      var pts = Array.from(pointers.values());
-      var distance = getPointerDistance(pts[0], pts[1]);
-      var photo = getPhoto(currentPhotoId);
-      var transform = getTransform(photo);
-      transform.zoom = Math.max(1, Math.min(4, pinchState.zoom * distance / Math.max(1, pinchState.distance)));
-      clampPhotoPan(photo, canvas.getWidth(), canvas.getHeight());
-      scheduleEditorBackgroundRefresh(photo);
-      event.preventDefault();
-    }, { passive: false });
-    ["pointerup", "pointercancel", "pointerleave"].forEach(function (name) {
-      els.canvasWrap.addEventListener(name, function (event) {
-        pointers.delete(event.pointerId);
-        if (pointers.size < 2) pinchState = null;
-      }, { passive: true });
-    });
-  }
-
-  function getPointerDistance(a, b) {
-    var dx = a.x - b.x;
-    var dy = a.y - b.y;
-    return Math.sqrt(dx * dx + dy * dy);
-  }
-
-  function clampPhotoPan(photo, width, height) {
-    var transform = getTransform(photo);
-    var rotated = getRotatedDimensions(photo);
-    var baseScale = Math.max(width / rotated.width, height / rotated.height);
-    var scale = baseScale * Math.max(1, transform.zoom || 1);
-    var extraX = Math.max(0, (rotated.width * scale - width) / 2);
-    var extraY = Math.max(0, (rotated.height * scale - height) / 2);
-    transform.panX = extraX ? Math.max(-1, Math.min(1, transform.panX || 0)) : 0;
-    transform.panY = extraY ? Math.max(-1, Math.min(1, transform.panY || 0)) : 0;
   }
 
   function getFittedSize(width, height) {

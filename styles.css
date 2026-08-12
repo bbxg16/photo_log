@@ -267,22 +267,10 @@ main {
   margin-bottom: 14px;
 }
 
-.crop-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.crop-toolbar button {
+.rotate-btn {
   min-height: 32px;
-  padding: 0 10px;
+  padding: 0 12px;
   font-size: 13px;
-}
-
-.crop-toolbar button.active {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: #fff;
 }
 
 .editor-toolbar span {
@@ -318,15 +306,6 @@ main {
   background: #e7e0d3;
   box-shadow: none;
   touch-action: none;
-}
-
-.canvas-wrap.crop-active::after {
-  content: "";
-  position: absolute;
-  inset: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.9);
-  box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.08);
-  pointer-events: none;
 }
 
 .canvas-wrap canvas {
@@ -565,17 +544,6 @@ main {
   .editor-toolbar {
     gap: 6px;
     margin-bottom: 8px;
-  }
-
-  .crop-toolbar {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .crop-toolbar button {
-    min-height: 28px;
-    padding: 0 8px;
-    font-size: 12px;
   }
 
   .editor-toolbar span {
