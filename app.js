@@ -72,14 +72,12 @@
       "nextPhotoBtn",
       "editorPosition",
       "addTextBtn",
-      "finishEditingBtn",
       "canvasWrap",
       "photoCanvas",
       "fontSize",
       "fontSizeValue",
       "colorControls",
       "backgroundControls",
-      "deleteTextBtn",
       "exportStitchBtn",
       "backToPoolBtn",
       "backToEditBtn",
@@ -127,8 +125,6 @@
       moveEditor(1);
     });
     els.addTextBtn.addEventListener("click", addTextBox);
-    els.deleteTextBtn.addEventListener("click", deleteActiveText);
-    els.finishEditingBtn.addEventListener("click", goToStitch);
     els.backToPoolBtn.addEventListener("click", cancelActiveBatch);
     els.backToEditBtn.addEventListener("click", backToEditFromReview);
     els.exportStitchBtn.addEventListener("click", exportStitch);
@@ -142,7 +138,7 @@
         return;
       }
       obj.set("fontSize", canvas.getWidth() * (percent / 100));
-      if (shouldAutoFit(obj)) fitTextWidth(obj);
+      fitTextWidth(obj);
       state.draftText.fontSizePercent = percent;
       canvas.requestRenderAll();
       syncObjectToModel(obj);
@@ -173,16 +169,8 @@
     });
     canvas.on("object:moving", clampAndSyncObject);
     canvas.on("object:modified", clampAndSyncObject);
-    canvas.on("object:scaling", function (event) {
-      var obj = event.target;
-      if (!isTextObject(obj)) return;
-      var model = getTextModel(obj.textId);
-      if (model) model.autoFit = false;
-      clampAndSyncObject(event);
-    });
     canvas.on("text:changed", function (event) {
-      var model = getTextModel(event.target.textId);
-      if (!model || model.autoFit !== false) fitTextWidth(event.target);
+      fitTextWidth(event.target);
       syncObjectToModel(event.target);
       updateTextControls();
     });
@@ -365,7 +353,6 @@
     els.prevPhotoBtn.disabled = !state.editorIds.length;
     els.nextPhotoBtn.disabled = !state.editorIds.length;
     els.addTextBtn.disabled = !currentPhotoId || !editorReady;
-    els.finishEditingBtn.disabled = batchCount === 0;
     els.clearBtn.disabled = totalLoaded === 0;
     updateEditorPosition();
     updateStitchCount();
@@ -496,12 +483,12 @@
       backgroundColor: BG_COLORS[text.background] || "",
       fontFamily: 'Arial, "PingFang SC", "Microsoft YaHei", sans-serif',
       editable: true,
-      padding: 6,
+      padding: 3,
       borderColor: "#1769ff",
       cornerColor: "#11a8ff",
       editingBorderColor: "#1769ff",
       hasControls: true,
-      lockScalingX: false,
+      lockScalingX: true,
       lockScalingY: true,
       lockRotation: true,
       lockUniScaling: true,
@@ -511,13 +498,23 @@
     obj.setControlsVisibility({
       mt: false,
       mb: false,
-      ml: true,
-      mr: true,
+      ml: false,
+      mr: false,
       tl: false,
       tr: false,
       bl: false,
       br: false,
       mtr: false
+    });
+    obj.controls.deleteControl = new fabric.Control({
+      x: 0.5,
+      y: -0.5,
+      offsetX: 12,
+      offsetY: -12,
+      cursorStyle: "pointer",
+      mouseUpHandler: deleteTextControlHandler,
+      render: renderDeleteControl,
+      cornerSize: 24
     });
     return obj;
   }
@@ -534,8 +531,7 @@
       widthRatio: 0.2,
       fontSizeRatio: draft.fontSizePercent / 100,
       color: draft.color,
-      background: draft.background,
-      autoFit: true
+      background: draft.background
     };
     photo.texts.push(text);
     var obj = createFabricText(text);
@@ -572,7 +568,6 @@
     var enabled = Boolean(obj);
     var controlsEnabled = hasPhoto && editorReady;
     els.fontSize.disabled = !controlsEnabled;
-    els.deleteTextBtn.disabled = !enabled;
     Array.prototype.forEach.call(els.colorControls.children, function (button) {
       var activeColor = enabled ? obj.fill : state.draftText.color;
       button.disabled = !controlsEnabled;
@@ -626,17 +621,12 @@
     if (!isTextObject(obj)) return;
     var maxWidth = Math.max(60, canvas.getWidth() - obj.left - 12);
     var textWidth = measureTextboxTextWidth(obj);
-    var nextWidth = Math.max(32, Math.min(maxWidth, textWidth + obj.padding * 2 + 8));
+    var nextWidth = Math.max(18, Math.min(maxWidth, textWidth + 2));
     obj.set({
       width: nextWidth,
       scaleX: 1
     });
     obj.setCoords();
-  }
-
-  function shouldAutoFit(obj) {
-    var model = getTextModel(obj.textId);
-    return !model || model.autoFit !== false;
   }
 
   function measureTextboxTextWidth(obj) {
@@ -665,27 +655,49 @@
     return Number(value).toFixed(1).replace(".0", "") + "%";
   }
 
-  function deleteActiveText() {
-    var obj = getActiveTextObject();
+  function renderDeleteControl(ctx, left, top, styleOverride, fabricObject) {
+    var size = this.cornerSize || 24;
+    ctx.save();
+    ctx.translate(left, top);
+    ctx.fillStyle = "#e11d48";
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, 0, size / 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.moveTo(-5, -5);
+    ctx.lineTo(5, 5);
+    ctx.moveTo(5, -5);
+    ctx.lineTo(-5, 5);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function deleteTextControlHandler(eventData, transform) {
+    deleteTextObject(transform.target);
+    return true;
+  }
+
+  function deleteTextObject(obj) {
     var photo = getPhoto(currentPhotoId);
     if (!obj || !photo) return;
     photo.texts = photo.texts.filter(function (text) {
       return text.id !== obj.textId;
     });
     canvas.remove(obj);
+    canvas.discardActiveObject();
     state.activeTextId = null;
+    canvas.requestRenderAll();
     updateTextControls();
   }
 
   function clampAndSyncObject(event) {
     var obj = event.target;
     if (!isTextObject(obj)) return;
-    if (obj.scaleX !== 1) {
-      obj.set({
-        width: Math.max(20, obj.width * obj.scaleX),
-        scaleX: 1
-      });
-    }
     var maxLeft = Math.max(0, canvas.getWidth() - obj.getScaledWidth());
     var maxTop = Math.max(0, canvas.getHeight() - obj.getScaledHeight());
     obj.set({
@@ -977,6 +989,13 @@
     var total = state.editorIds.length;
     var current = total ? state.editorIndex + 1 : 0;
     els.editorPosition.textContent = current + " / " + total;
+    if (total && state.reviewEditReturn) {
+      els.nextPhotoBtn.textContent = "Review Order";
+    } else if (total && state.editorIndex === total - 1) {
+      els.nextPhotoBtn.textContent = "Review Order";
+    } else {
+      els.nextPhotoBtn.textContent = "Next";
+    }
   }
 
   function updateStitchCount() {
