@@ -13,8 +13,13 @@ Photo Log Editor is designed for people who want to upload a larger set of image
 - Edit selected images one by one with simple Back and Next navigation.
 - Skip text edits by pressing Next.
 - Add one or more editable text boxes directly on an image.
-- Adjust text size, text color, and text background.
+- Adjust text size with a simple number input.
+- Choose preset colors or use the custom color picker.
+- Choose simple system font styles for Chinese and English text, including a handwritten-style option when available.
+- Set text background to none, white, or black.
 - Drag text boxes into place.
+- Rotate images and crop to Original, 4:3, 1:1, or 16:9.
+- In crop mode, move the image and pinch or scroll to zoom into the part you want to keep.
 - Review all selected images in order before stitching.
 - Reorder the selected batch.
 - Tap an image in the review step to edit its text again.
@@ -27,7 +32,7 @@ Photo Log Editor is designed for people who want to upload a larger set of image
 2. Select the images for one long stitched image.
 3. Press Next.
 4. Move through the selected images one by one.
-5. Add text where needed, or press Next to skip.
+5. Add text, rotate, or crop where needed, or press Next to skip.
 6. Review the selected batch in order.
 7. Reorder images if needed.
 8. Tap any image to edit it again.
@@ -58,7 +63,7 @@ JPEG is the primary target, including larger JPEG files. For iPhone Live Photos,
 
 ## Image Quality
 
-The app keeps the original uploaded file untouched. It uses lightweight thumbnails and previews while editing, then renders the final stitched export from the original images where possible. For very large or very long stitched images, the export width may be reduced automatically to avoid browser memory crashes, especially on mobile.
+The app keeps the original uploaded file untouched. It uses lightweight thumbnails and previews while editing, then renders the final stitched export from the original images where possible, including crop, rotate, and text edits. For very large or very long stitched images, the export width may be reduced automatically to avoid browser memory crashes, especially on mobile.
 
 ## Running Locally
 

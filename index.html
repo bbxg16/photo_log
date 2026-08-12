@@ -45,6 +45,13 @@
         <section id="editorScreen" class="screen editor-screen">
           <div class="editor-toolbar">
             <span id="editorPosition">0 / 0</span>
+            <div class="crop-toolbar" aria-label="Crop and rotate controls">
+              <button id="rotateBtn" type="button">Rotate</button>
+              <button type="button" data-crop-ratio="original" class="active">Original</button>
+              <button type="button" data-crop-ratio="4:3">4:3</button>
+              <button type="button" data-crop-ratio="1:1">1:1</button>
+              <button type="button" data-crop-ratio="16:9">16:9</button>
+            </div>
           </div>
 
           <div class="editor-layout">
@@ -62,14 +69,26 @@
               <div class="text-edit-controls">
                 <button id="addTextBtn" class="primary-btn wide">Add</button>
 
+                <label class="field-label" for="fontFamily">Font</label>
+                <select id="fontFamily" class="font-select">
+                  <option value='Arial, "PingFang SC", "Microsoft YaHei", sans-serif'>Sans</option>
+                  <option value='Georgia, "Songti SC", SimSun, serif'>Serif</option>
+                  <option value='"Trebuchet MS", "PingFang SC", "Microsoft YaHei", sans-serif'>Soft</option>
+                  <option value='"Comic Sans MS", "Marker Felt", "STKaiti", KaiTi, cursive'>Handwritten</option>
+                  <option value='"Courier New", "Microsoft YaHei", monospace'>Mono</option>
+                </select>
+
                 <label class="field-label" for="fontSize">Font size</label>
-                <div class="range-row">
-                  <input id="fontSize" type="range" min="2" max="12" value="5" step="0.2" />
-                  <span id="fontSizeValue">5%</span>
-                </div>
+                <input id="fontSize" class="font-size-input" type="number" min="10" max="180" value="36" step="1" inputmode="numeric" />
 
                 <div class="field-label">Text color</div>
-                <div id="colorControls" class="swatches"></div>
+                <div class="color-row">
+                  <div id="colorControls" class="swatches"></div>
+                  <label class="more-color" title="More colors">
+                    <input id="moreColor" type="color" value="#ffffff" />
+                    <span>More</span>
+                  </label>
+                </div>
 
                 <div class="field-label">Background</div>
                 <div id="backgroundControls" class="segmented">

@@ -263,7 +263,26 @@ main {
   flex-wrap: wrap;
   gap: 10px;
   align-items: center;
+  justify-content: space-between;
   margin-bottom: 14px;
+}
+
+.crop-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.crop-toolbar button {
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 13px;
+}
+
+.crop-toolbar button.active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
 }
 
 .editor-toolbar span {
@@ -301,6 +320,15 @@ main {
   touch-action: none;
 }
 
+.canvas-wrap.crop-active::after {
+  content: "";
+  position: absolute;
+  inset: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.08);
+  pointer-events: none;
+}
+
 .canvas-wrap canvas {
   max-width: 100%;
 }
@@ -333,7 +361,23 @@ main {
 
 .text-edit-controls {
   display: grid;
-  gap: 12px;
+  gap: 10px;
+}
+
+.font-select,
+.font-size-input {
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: #fff;
+  color: var(--ink);
+  padding: 0 10px;
+  font: inherit;
+}
+
+.font-size-input {
+  max-width: 112px;
 }
 
 .field-label {
@@ -342,16 +386,11 @@ main {
   font-weight: 700;
 }
 
-.range-row {
-  display: grid;
-  grid-template-columns: 1fr 46px;
-  gap: 10px;
+.color-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   align-items: center;
-}
-
-input[type="range"] {
-  width: 100%;
-  accent-color: var(--accent);
 }
 
 .swatches {
@@ -371,6 +410,26 @@ input[type="range"] {
 .swatch.active {
   outline: 2px solid var(--ink);
   outline-offset: 2px;
+}
+
+.more-color {
+  display: grid;
+  grid-template-columns: 30px auto;
+  gap: 6px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.more-color input {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  overflow: hidden;
+  background: transparent;
 }
 
 .segmented {
@@ -503,6 +562,22 @@ input[type="range"] {
     padding-bottom: 0;
   }
 
+  .editor-toolbar {
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .crop-toolbar {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .crop-toolbar button {
+    min-height: 28px;
+    padding: 0 8px;
+    font-size: 12px;
+  }
+
   .editor-toolbar span {
     display: block;
     min-width: 0;
@@ -541,9 +616,9 @@ input[type="range"] {
     bottom: 0;
     z-index: 10;
     margin-inline: -14px;
-    max-height: 24vh;
+    max-height: 28vh;
     overflow: auto;
-    padding: 8px 10px;
+    padding: 7px 10px;
     border-inline: 0;
     border-bottom: 0;
     border-radius: 2px 2px 0 0;
@@ -551,8 +626,9 @@ input[type="range"] {
 
   .text-edit-controls {
     display: grid;
-    grid-template-columns: 0.64fr 1.45fr;
+    grid-template-columns: 0.55fr 1fr 1fr;
     gap: 5px 7px;
+    align-items: center;
   }
 
   .text-panel .field-label {
@@ -570,29 +646,56 @@ input[type="range"] {
   }
 
   #addTextBtn {
-    grid-column: 1;
-    grid-row: 1;
+    grid-column: 1 / -1;
+    grid-row: auto;
   }
 
-  .range-row {
-    grid-column: 2;
-    grid-template-columns: minmax(0, 1fr) 34px;
+  .text-panel .field-label {
+    grid-column: 1;
+  }
+
+  .font-select {
+    grid-column: 2 / 4;
+    min-height: 30px;
+  }
+
+  .font-size-input {
+    grid-column: 2 / 4;
+    min-height: 30px;
+    max-width: 80px;
+  }
+
+  .color-row {
+    grid-column: 2 / 4;
+    gap: 5px;
   }
 
   .swatches {
-    grid-column: 2;
-    grid-template-columns: repeat(6, 24px);
+    grid-template-columns: repeat(6, 23px);
     gap: 4px;
   }
 
   .swatch {
+    width: 23px;
+    height: 23px;
+    min-height: 23px;
+  }
+
+  .more-color {
+    grid-template-columns: 24px;
+  }
+
+  .more-color span {
+    display: none;
+  }
+
+  .more-color input {
     width: 24px;
     height: 24px;
-    min-height: 24px;
   }
 
   .segmented {
-    grid-column: 2;
+    grid-column: 2 / 4;
     gap: 5px;
   }
 

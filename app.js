@@ -6,6 +6,14 @@
   var STITCH_TARGET_WIDTH = 2160;
   var MAX_STITCH_PIXELS = 32000000;
   var THUMB_SIZE = 360;
+  var FONT_SIZE_BASE_WIDTH = 720;
+  var DEFAULT_FONT_FAMILY = 'Arial, "PingFang SC", "Microsoft YaHei", sans-serif';
+  var CROP_RATIOS = {
+    original: null,
+    "4:3": 4 / 3,
+    "1:1": 1,
+    "16:9": 16 / 9
+  };
   var TEXT_COLORS = [
     { name: "White", value: "#ffffff" },
     { name: "Black", value: "#000000" },
@@ -31,9 +39,10 @@
     editorMode: "sequence",
     reviewEditReturn: false,
     draftText: {
-      fontSizePercent: 5,
+      fontSize: 36,
       color: "#ffffff",
-      background: "none"
+      background: "none",
+      fontFamily: DEFAULT_FONT_FAMILY
     }
   };
 
@@ -43,6 +52,9 @@
   var editorReady = false;
   var editorLoadToken = 0;
   var suppressObjectSync = false;
+  var cropDrag = null;
+  var cropRefreshPending = false;
+  var pinchState = null;
   var toastTimer = null;
 
   document.addEventListener("DOMContentLoaded", init);
@@ -75,7 +87,8 @@
       "canvasWrap",
       "photoCanvas",
       "fontSize",
-      "fontSizeValue",
+      "fontFamily",
+      "moreColor",
       "colorControls",
       "backgroundControls",
       "exportStitchBtn",
@@ -83,7 +96,8 @@
       "backToEditBtn",
       "stitchCount",
       "stitchList",
-      "toast"
+      "toast",
+      "rotateBtn"
     ].forEach(function (id) {
       els[id] = document.getElementById(id);
     });
@@ -131,17 +145,28 @@
 
     els.fontSize.addEventListener("input", function () {
       var obj = getActiveTextObject();
-      var percent = Number(els.fontSize.value);
-      els.fontSizeValue.textContent = percent.toFixed(1).replace(".0", "") + "%";
+      var size = clampFontSize(Number(els.fontSize.value) || state.draftText.fontSize);
       if (!obj) {
-        state.draftText.fontSizePercent = percent;
+        state.draftText.fontSize = size;
         return;
       }
-      obj.set("fontSize", canvas.getWidth() * (percent / 100));
+      obj.set("fontSize", fontSizeNumberToCanvas(size));
       fitTextWidth(obj);
-      state.draftText.fontSizePercent = percent;
+      state.draftText.fontSize = size;
       canvas.requestRenderAll();
       syncObjectToModel(obj);
+    });
+    els.fontFamily.addEventListener("change", function () {
+      applyFontFamily(els.fontFamily.value);
+    });
+    els.moreColor.addEventListener("input", function () {
+      applyTextColor(els.moreColor.value);
+    });
+    els.rotateBtn.addEventListener("click", rotateCurrentPhoto);
+    Array.prototype.forEach.call(document.querySelectorAll("[data-crop-ratio]"), function (button) {
+      button.addEventListener("click", function () {
+        setCropRatio(button.dataset.cropRatio);
+      });
     });
     els.backgroundControls.addEventListener("click", function (event) {
       var button = event.target.closest("button[data-bg]");
@@ -152,6 +177,7 @@
     window.addEventListener("resize", debounce(function () {
       if (currentPhotoId) loadEditorPhoto(getPhoto(currentPhotoId));
     }, 180));
+    bindCropGestures();
   }
 
   function setupFabric() {
@@ -182,12 +208,16 @@
       state.activeTextId = event.target.textId;
       updateTextControls();
     });
-    canvas.on("mouse:down", function () {
+    canvas.on("mouse:down", function (event) {
       els.canvasWrap.classList.add("dragging");
+      startCropDrag(event);
     });
+    canvas.on("mouse:move", dragCropImage);
     canvas.on("mouse:up", function () {
       els.canvasWrap.classList.remove("dragging");
+      cropDrag = null;
     });
+    canvas.on("mouse:wheel", wheelCropImage);
   }
 
   function buildColorControls() {
@@ -259,6 +289,7 @@
       thumbUrl: URL.createObjectURL(thumbBlob),
       width: dimensions.width,
       height: dimensions.height,
+      transform: defaultTransform(),
       texts: []
     };
   }
@@ -427,6 +458,8 @@
   function loadEditorPhoto(photo) {
     if (!photo) return;
     var loadToken = ++editorLoadToken;
+    var previousPhoto = getPhoto(currentPhotoId);
+    if (previousPhoto && previousPhoto.id !== photo.id) delete previousPhoto.editorImageElement;
     currentPhotoId = photo.id;
     editorReady = false;
     state.activeTextId = null;
@@ -434,30 +467,241 @@
     canvas.discardActiveObject();
     canvas.clear();
     updateUi();
-    var fitted = getFittedSize(photo.width, photo.height);
+    var dims = getOutputDimensions(photo);
+    var fitted = getFittedSize(dims.width, dims.height);
     canvas.setWidth(fitted.width);
     canvas.setHeight(fitted.height);
-    fabric.Image.fromURL(photo.sourceUrl, function (img) {
+    updateCropControls(photo);
+    refreshEditorBackground(photo, loadToken).then(function () {
       if (loadToken !== editorLoadToken) return;
-      img.set({
-        left: 0,
-        top: 0,
-        selectable: false,
-        evented: false,
-        scaleX: fitted.width / photo.width,
-        scaleY: fitted.height / photo.height
+      photo.texts.forEach(function (text) {
+        canvas.add(createFabricText(text));
       });
-      canvas.setBackgroundImage(img, function () {
-        photo.texts.forEach(function (text) {
-          canvas.add(createFabricText(text));
+      suppressObjectSync = false;
+      editorReady = true;
+      canvas.requestRenderAll();
+      updateEditorPosition();
+      updateUi();
+    }).catch(function (error) {
+      console.error(error);
+      showToast("Could not load this photo.");
+    });
+  }
+
+  async function refreshEditorBackground(photo, loadToken) {
+    if (!photo || (loadToken && loadToken !== editorLoadToken)) return;
+    var dataUrl = await renderPhotoFrameDataUrl(photo, canvas.getWidth(), canvas.getHeight(), 0.92);
+    if (loadToken && loadToken !== editorLoadToken) return;
+    return new Promise(function (resolve) {
+      fabric.Image.fromURL(dataUrl, function (img) {
+        img.set({ left: 0, top: 0, selectable: false, evented: false });
+        canvas.setBackgroundImage(img, function () {
+          canvas.requestRenderAll();
+          resolve();
         });
-        suppressObjectSync = false;
-        editorReady = true;
-        canvas.requestRenderAll();
-        updateEditorPosition();
-        updateUi();
       });
-    }, { crossOrigin: "anonymous" });
+    });
+  }
+
+  function defaultTransform() {
+    return { rotation: 0, cropRatio: "original", zoom: 1, panX: 0, panY: 0 };
+  }
+
+  function getTransform(photo) {
+    if (!photo.transform) photo.transform = defaultTransform();
+    return photo.transform;
+  }
+
+  function getRotatedDimensions(photo) {
+    var rotation = normalizeRotation(getTransform(photo).rotation);
+    if (rotation === 90 || rotation === 270) return { width: photo.height, height: photo.width };
+    return { width: photo.width, height: photo.height };
+  }
+
+  function getOutputDimensions(photo) {
+    var rotated = getRotatedDimensions(photo);
+    var ratioName = getTransform(photo).cropRatio || "original";
+    var ratio = CROP_RATIOS[ratioName];
+    if (!ratio) return rotated;
+    var currentRatio = rotated.width / rotated.height;
+    if (currentRatio > ratio) return { width: Math.round(rotated.height * ratio), height: rotated.height };
+    return { width: rotated.width, height: Math.round(rotated.width / ratio) };
+  }
+
+  async function renderPhotoFrameDataUrl(photo, width, height, quality) {
+    var canvasEl = document.createElement("canvas");
+    canvasEl.width = Math.max(1, Math.round(width));
+    canvasEl.height = Math.max(1, Math.round(height));
+    var ctx = canvasEl.getContext("2d", { alpha: false });
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvasEl.width, canvasEl.height);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    var img = await getImageElement(photo);
+    drawPhotoFrame(ctx, img, photo, canvasEl.width, canvasEl.height);
+    var dataUrl = canvasEl.toDataURL("image/jpeg", quality || 0.92);
+    canvasEl.width = 1;
+    canvasEl.height = 1;
+    return dataUrl;
+  }
+
+  function drawPhotoFrame(ctx, img, photo, width, height) {
+    var transform = getTransform(photo);
+    var rotated = getRotatedDimensions(photo);
+    var baseScale = Math.max(width / rotated.width, height / rotated.height);
+    var zoom = Math.max(1, transform.zoom || 1);
+    var scale = baseScale * zoom;
+    var drawnW = rotated.width * scale;
+    var drawnH = rotated.height * scale;
+    var extraX = Math.max(0, (drawnW - width) / 2);
+    var extraY = Math.max(0, (drawnH - height) / 2);
+    clampPhotoPan(photo, width, height);
+    var x = (width - drawnW) / 2 + (transform.panX || 0) * extraX;
+    var y = (height - drawnH) / 2 + (transform.panY || 0) * extraY;
+
+    ctx.save();
+    ctx.translate(x + drawnW / 2, y + drawnH / 2);
+    ctx.rotate((normalizeRotation(transform.rotation) * Math.PI) / 180);
+    ctx.drawImage(img, -photo.width * scale / 2, -photo.height * scale / 2, photo.width * scale, photo.height * scale);
+    ctx.restore();
+  }
+
+  function normalizeRotation(value) {
+    return ((Math.round(value / 90) * 90) % 360 + 360) % 360;
+  }
+
+  function getImageElement(photo) {
+    if (photo.editorImageElement) return Promise.resolve(photo.editorImageElement);
+    return urlToImage(photo.sourceUrl).then(function (img) {
+      photo.editorImageElement = img;
+      return img;
+    });
+  }
+
+  function rotateCurrentPhoto() {
+    var photo = getPhoto(currentPhotoId);
+    if (!photo) return;
+    var transform = getTransform(photo);
+    transform.rotation = normalizeRotation(transform.rotation + 90);
+    transform.panX = 0;
+    transform.panY = 0;
+    transform.zoom = 1;
+    loadEditorPhoto(photo);
+  }
+
+  function setCropRatio(ratioName) {
+    var photo = getPhoto(currentPhotoId);
+    if (!photo || !Object.prototype.hasOwnProperty.call(CROP_RATIOS, ratioName)) return;
+    var transform = getTransform(photo);
+    transform.cropRatio = ratioName;
+    transform.panX = 0;
+    transform.panY = 0;
+    transform.zoom = 1;
+    loadEditorPhoto(photo);
+  }
+
+  function updateCropControls(photo) {
+    var transform = photo ? getTransform(photo) : defaultTransform();
+    els.canvasWrap.classList.toggle("crop-active", transform.cropRatio !== "original");
+    Array.prototype.forEach.call(document.querySelectorAll("[data-crop-ratio]"), function (button) {
+      button.classList.toggle("active", button.dataset.cropRatio === transform.cropRatio);
+    });
+  }
+
+  function isCropActive() {
+    var photo = getPhoto(currentPhotoId);
+    return Boolean(photo && getTransform(photo).cropRatio !== "original" && editorReady);
+  }
+
+  function startCropDrag(event) {
+    if (!isCropActive() || event.target) return;
+    var e = event.e;
+    cropDrag = { x: e.clientX, y: e.clientY };
+    e.preventDefault && e.preventDefault();
+  }
+
+  function dragCropImage(event) {
+    if (!cropDrag || !isCropActive()) return;
+    var e = event.e;
+    var photo = getPhoto(currentPhotoId);
+    var transform = getTransform(photo);
+    var dx = e.clientX - cropDrag.x;
+    var dy = e.clientY - cropDrag.y;
+    cropDrag = { x: e.clientX, y: e.clientY };
+    transform.panX += dx / Math.max(1, canvas.getWidth()) * 2;
+    transform.panY += dy / Math.max(1, canvas.getHeight()) * 2;
+    clampPhotoPan(photo, canvas.getWidth(), canvas.getHeight());
+    scheduleEditorBackgroundRefresh(photo);
+    e.preventDefault && e.preventDefault();
+  }
+
+  function scheduleEditorBackgroundRefresh(photo) {
+    if (cropRefreshPending) return;
+    cropRefreshPending = true;
+    window.requestAnimationFrame(function () {
+      cropRefreshPending = false;
+      if (photo && photo.id === currentPhotoId) refreshEditorBackground(photo);
+    });
+  }
+
+  function wheelCropImage(event) {
+    if (!isCropActive() || event.target) return;
+    var e = event.e;
+    var photo = getPhoto(currentPhotoId);
+    var transform = getTransform(photo);
+    var nextZoom = transform.zoom * (e.deltaY < 0 ? 1.06 : 0.94);
+    transform.zoom = Math.max(1, Math.min(4, nextZoom));
+    clampPhotoPan(photo, canvas.getWidth(), canvas.getHeight());
+    scheduleEditorBackgroundRefresh(photo);
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  function bindCropGestures() {
+    var pointers = new Map();
+    els.canvasWrap.addEventListener("pointerdown", function (event) {
+      if (!isCropActive()) return;
+      pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (pointers.size === 2) {
+        var pts = Array.from(pointers.values());
+        pinchState = { distance: getPointerDistance(pts[0], pts[1]), zoom: getTransform(getPhoto(currentPhotoId)).zoom || 1 };
+      }
+    }, { passive: true });
+    els.canvasWrap.addEventListener("pointermove", function (event) {
+      if (!isCropActive() || !pointers.has(event.pointerId) || pointers.size < 2 || !pinchState) return;
+      pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      var pts = Array.from(pointers.values());
+      var distance = getPointerDistance(pts[0], pts[1]);
+      var photo = getPhoto(currentPhotoId);
+      var transform = getTransform(photo);
+      transform.zoom = Math.max(1, Math.min(4, pinchState.zoom * distance / Math.max(1, pinchState.distance)));
+      clampPhotoPan(photo, canvas.getWidth(), canvas.getHeight());
+      scheduleEditorBackgroundRefresh(photo);
+      event.preventDefault();
+    }, { passive: false });
+    ["pointerup", "pointercancel", "pointerleave"].forEach(function (name) {
+      els.canvasWrap.addEventListener(name, function (event) {
+        pointers.delete(event.pointerId);
+        if (pointers.size < 2) pinchState = null;
+      }, { passive: true });
+    });
+  }
+
+  function getPointerDistance(a, b) {
+    var dx = a.x - b.x;
+    var dy = a.y - b.y;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  function clampPhotoPan(photo, width, height) {
+    var transform = getTransform(photo);
+    var rotated = getRotatedDimensions(photo);
+    var baseScale = Math.max(width / rotated.width, height / rotated.height);
+    var scale = baseScale * Math.max(1, transform.zoom || 1);
+    var extraX = Math.max(0, (rotated.width * scale - width) / 2);
+    var extraY = Math.max(0, (rotated.height * scale - height) / 2);
+    transform.panX = extraX ? Math.max(-1, Math.min(1, transform.panX || 0)) : 0;
+    transform.panY = extraY ? Math.max(-1, Math.min(1, transform.panY || 0)) : 0;
   }
 
   function getFittedSize(width, height) {
@@ -481,7 +725,7 @@
       fontSize: Math.max(8, text.fontSizeRatio * w),
       fill: text.color,
       backgroundColor: BG_COLORS[text.background] || "",
-      fontFamily: 'Arial, "PingFang SC", "Microsoft YaHei", sans-serif',
+      fontFamily: text.fontFamily || DEFAULT_FONT_FAMILY,
       editable: true,
       padding: 3,
       borderColor: "#1769ff",
@@ -529,9 +773,10 @@
       x: 0.1,
       y: 0.1,
       widthRatio: 0.2,
-      fontSizeRatio: draft.fontSizePercent / 100,
+      fontSizeRatio: fontSizeNumberToRatio(draft.fontSize),
       color: draft.color,
-      background: draft.background
+      background: draft.background,
+      fontFamily: draft.fontFamily
     };
     photo.texts.push(text);
     var obj = createFabricText(text);
@@ -568,6 +813,8 @@
     var enabled = Boolean(obj);
     var controlsEnabled = hasPhoto && editorReady;
     els.fontSize.disabled = !controlsEnabled;
+    els.fontFamily.disabled = !controlsEnabled;
+    els.moreColor.disabled = !controlsEnabled;
     Array.prototype.forEach.call(els.colorControls.children, function (button) {
       var activeColor = enabled ? obj.fill : state.draftText.color;
       button.disabled = !controlsEnabled;
@@ -579,13 +826,14 @@
       button.classList.toggle("active", controlsEnabled && activeBackground === button.dataset.bg);
     });
     if (!enabled) {
-      els.fontSize.value = String(state.draftText.fontSizePercent);
-      els.fontSizeValue.textContent = formatPercent(state.draftText.fontSizePercent);
+      els.fontSize.value = String(state.draftText.fontSize);
+      els.fontFamily.value = state.draftText.fontFamily;
+      els.moreColor.value = toColorInputValue(state.draftText.color);
       return;
     }
-    var sizePercent = (obj.fontSize / canvas.getWidth()) * 100;
-    els.fontSize.value = String(Math.max(2, Math.min(12, sizePercent)));
-    els.fontSizeValue.textContent = formatPercent(sizePercent);
+    els.fontSize.value = String(ratioToFontSizeNumber(obj.fontSize / canvas.getWidth()));
+    els.fontFamily.value = obj.fontFamily || DEFAULT_FONT_FAMILY;
+    els.moreColor.value = toColorInputValue(obj.fill);
   }
 
   function applyTextColor(color) {
@@ -597,6 +845,21 @@
     }
     obj.set("fill", color);
     state.draftText.color = color;
+    canvas.requestRenderAll();
+    syncObjectToModel(obj);
+    updateTextControls();
+  }
+
+  function applyFontFamily(fontFamily) {
+    var obj = getActiveTextObject();
+    if (!obj) {
+      state.draftText.fontFamily = fontFamily;
+      updateTextControls();
+      return;
+    }
+    obj.set("fontFamily", fontFamily || DEFAULT_FONT_FAMILY);
+    fitTextWidth(obj);
+    state.draftText.fontFamily = fontFamily || DEFAULT_FONT_FAMILY;
     canvas.requestRenderAll();
     syncObjectToModel(obj);
     updateTextControls();
@@ -645,14 +908,27 @@
 
   function readDraftFromControls() {
     return {
-      fontSizePercent: Number(els.fontSize.value) || state.draftText.fontSizePercent,
+      fontSize: clampFontSize(Number(els.fontSize.value) || state.draftText.fontSize),
       color: state.draftText.color,
-      background: state.draftText.background
+      background: state.draftText.background,
+      fontFamily: els.fontFamily.value || state.draftText.fontFamily
     };
   }
 
-  function formatPercent(value) {
-    return Number(value).toFixed(1).replace(".0", "") + "%";
+  function clampFontSize(value) {
+    return Math.max(10, Math.min(180, Math.round(value || 36)));
+  }
+
+  function fontSizeNumberToRatio(value) {
+    return clampFontSize(value) / FONT_SIZE_BASE_WIDTH;
+  }
+
+  function fontSizeNumberToCanvas(value) {
+    return Math.max(8, fontSizeNumberToRatio(value) * canvas.getWidth());
+  }
+
+  function ratioToFontSizeNumber(ratio) {
+    return clampFontSize(ratio * FONT_SIZE_BASE_WIDTH);
   }
 
   function renderDeleteControl(ctx, left, top, styleOverride, fabricObject) {
@@ -717,6 +993,7 @@
     model.widthRatio = obj.width / canvas.getWidth();
     model.fontSizeRatio = obj.fontSize / canvas.getWidth();
     model.color = obj.fill;
+    model.fontFamily = obj.fontFamily || DEFAULT_FONT_FAMILY;
   }
 
   function getTextModel(textId) {
@@ -847,7 +1124,8 @@
     var photos = state.stitchIds.map(getPhoto).filter(Boolean);
     var width = getSafeStitchWidth(photos);
     var height = photos.reduce(function (sum, photo) {
-      return sum + Math.round(width * (photo.height / photo.width));
+      var dims = getOutputDimensions(photo);
+      return sum + Math.round(width * (dims.height / dims.width));
     }, 0);
     showToast("Rendering stitched image...");
     var canvasEl = document.createElement("canvas");
@@ -861,7 +1139,8 @@
     var y = 0;
     for (var i = 0; i < photos.length; i += 1) {
       var photo = photos[i];
-      var partHeight = Math.round(width * (photo.height / photo.width));
+      var dims = getOutputDimensions(photo);
+      var partHeight = Math.round(width * (dims.height / dims.width));
       var blob = await renderPhotoToBlob(photo, width);
       var img = await blobToImage(blob);
       ctx.drawImage(img, 0, y, width, partHeight);
@@ -883,7 +1162,8 @@
 
   function getSafeStitchWidth(photos) {
     var aspectTotal = photos.reduce(function (sum, photo) {
-      return sum + photo.height / photo.width;
+      var dims = getOutputDimensions(photo);
+      return sum + dims.height / dims.width;
     }, 0);
     var width = STITCH_TARGET_WIDTH;
     while (width * Math.round(width * aspectTotal) > MAX_STITCH_PIXELS && width > 720) {
@@ -893,8 +1173,9 @@
   }
 
   async function renderPhotoToBlob(photo, outputWidth) {
-    var scale = outputWidth / photo.width;
-    var outputHeight = Math.max(1, Math.round(photo.height * scale));
+    var dims = getOutputDimensions(photo);
+    var scale = outputWidth / dims.width;
+    var outputHeight = Math.max(1, Math.round(dims.height * scale));
     var canvasEl = document.createElement("canvas");
     canvasEl.width = Math.max(1, Math.round(outputWidth));
     canvasEl.height = outputHeight;
@@ -903,9 +1184,10 @@
     ctx.fillRect(0, 0, canvasEl.width, canvasEl.height);
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
-    var img = await urlToImage(photo.sourceUrl);
-    ctx.drawImage(img, 0, 0, canvasEl.width, canvasEl.height);
+    var img = await getImageElement(photo);
+    drawPhotoFrame(ctx, img, photo, canvasEl.width, canvasEl.height);
     drawTextModels(ctx, photo, canvasEl.width, canvasEl.height);
+    if (photo.id !== currentPhotoId) delete photo.editorImageElement;
     return new Promise(function (resolve, reject) {
       canvasEl.toBlob(function (blob) {
         canvasEl.width = 1;
@@ -922,8 +1204,8 @@
       var x = text.x * width;
       var y = text.y * height;
       var textWidth = Math.max(20, text.widthRatio * width);
-      ctx.font = fontSize + 'px Arial, "PingFang SC", "Microsoft YaHei", sans-serif';
-      var lines = wrapText(ctx, text.value || "", textWidth, fontSize);
+      ctx.font = fontSize + "px " + (text.fontFamily || DEFAULT_FONT_FAMILY);
+      var lines = wrapText(ctx, text.value || "", textWidth, fontSize, text.fontFamily);
       ctx.textBaseline = "top";
       ctx.fillStyle = text.color || "#ffffff";
       var lineHeight = fontSize * 1.22;
@@ -939,8 +1221,8 @@
     });
   }
 
-  function wrapText(ctx, value, maxWidth, fontSize) {
-    ctx.font = fontSize + 'px Arial, "PingFang SC", "Microsoft YaHei", sans-serif';
+  function wrapText(ctx, value, maxWidth, fontSize, fontFamily) {
+    ctx.font = fontSize + "px " + (fontFamily || DEFAULT_FONT_FAMILY);
     var rawLines = String(value).split(/\n/);
     var lines = [];
     rawLines.forEach(function (raw) {
@@ -1011,6 +1293,12 @@
 
   function getTotalLoadedPhotoCount() {
     return state.photos.length + state.activeBatchPhotos.length;
+  }
+
+
+  function toColorInputValue(value) {
+    var normalized = normalizeColor(value);
+    return /^#[0-9a-f]{6}$/i.test(normalized) ? normalized : "#ffffff";
   }
 
   function normalizeColor(value) {
