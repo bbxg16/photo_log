@@ -1,30 +1,40 @@
 # Photo Log Editor
 
-A lightweight browser-based editor for making simple photo logs from multiple images.
+A lightweight browser-based editor for turning multiple photo-log images into long vertical share images.
 
-Photo Log Editor is designed for people who want to upload a few images, optionally add text to some of them, reorder everything, and export one long stitched image for sharing on Weibo, WeChat Moments/Friends Circle, or other social platforms.
+Photo Log Editor is designed for people who want to upload a larger set of images, choose a batch to stitch together, optionally add text to some images, reorder the selected batch, and export one long image for Weibo, WeChat Moments/Friends Circle, or other social platforms.
 
 ## What It Does
 
-- Upload up to 9 photos in one session.
-- View uploaded photos in a 3 x 3 gallery.
-- Select only the photos that need text edits.
+- Upload up to 50 photos in one session.
+- Select a batch of uploaded photos to stitch together.
+- Recommended batch size is up to 15 images, but the app does not block larger batches.
+- Move selected batch images out of the available pool while that long image is being made.
+- Edit selected images one by one with simple Back and Next navigation.
+- Skip text edits by pressing Next.
 - Add one or more editable text boxes directly on an image.
 - Adjust text size, text color, and text background.
 - Drag text boxes into place.
-- Reorder all uploaded photos before stitching.
+- Review all selected images in order before stitching.
+- Reorder the selected batch.
+- Tap an image in the review step to edit its text again.
 - Export one long vertical stitched image.
+- Return to remaining uploaded images and start another stitched image without reuploading.
 
-## Simple Workflow
+## Workflow
 
-1. Upload photos.
-2. Select the photos that need text.
-3. Edit text directly on the image.
-4. Continue to Stitch.
-5. Reorder the uploaded photos.
-6. Download the final long image.
+1. Upload images.
+2. Select the images for one long stitched image.
+3. Press Next.
+4. Move through the selected images one by one.
+5. Add text where needed, or press Next to skip.
+6. Review the selected batch in order.
+7. Reorder images if needed.
+8. Tap any image to edit it again.
+9. Press Stitch & Download.
+10. Return to the remaining uploaded images and start another batch, or upload more images.
 
-Photos that do not need text can skip editing and still be included in the stitched result.
+After a batch is stitched, those images are removed from the available image pool. This makes it easier to create several long images from one upload session without accidentally reusing the same photos.
 
 ## Privacy
 
@@ -44,11 +54,11 @@ Photos stay on the user's device during the current browser session.
 - WebP
 - HEIC / HEIF when browser-side conversion works
 
-For iPhone Live Photos, the app only works with the still image.
+JPEG is the primary target, including larger JPEG files. For iPhone Live Photos, the app only works with the still image.
 
 ## Image Quality
 
-The app keeps the original uploaded file untouched. It uses smaller previews while editing, then renders exports from the original image dimensions where possible. The stitched export is designed for high-quality sharing while avoiding overly large browser canvases on mobile.
+The app keeps the original uploaded file untouched. It uses lightweight thumbnails and previews while editing, then renders the final stitched export from the original images where possible. For very large or very long stitched images, the export width may be reduced automatically to avoid browser memory crashes, especially on mobile.
 
 ## Running Locally
 

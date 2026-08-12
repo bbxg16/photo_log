@@ -22,7 +22,7 @@
             <div class="import-copy">
               <span class="import-icon">+</span>
               <h2>Import photos</h2>
-              <p>Choose up to 9 JPG, PNG, WebP, HEIC, or HEIF images for this session.</p>
+              <p>Choose up to 50 JPG, PNG, WebP, HEIC, or HEIF images for this session.</p>
               <button id="chooseFilesBtn" class="primary-btn">Choose Photos</button>
             </div>
           </div>
@@ -31,13 +31,13 @@
         <section id="galleryScreen" class="screen">
           <div class="workspace-actions bottom-actions">
             <button id="addMoreBtn">Add Photos</button>
-            <button id="editSelectedBtn" class="primary-btn">Edit Selected</button>
-            <button id="goStitchBtn">Skip To Stitch</button>
+            <button id="editSelectedBtn" class="primary-btn">Next</button>
+            <button id="goStitchBtn">Review Batch</button>
             <button id="clearBtn" class="danger-btn">Clear Session</button>
           </div>
           <div class="selection-line">
             <strong id="photoCount">0 photos</strong>
-            <span id="selectedCount">0 selected for text</span>
+            <span id="selectedCount">0 selected, recommended up to 15</span>
           </div>
           <div id="gallery" class="gallery" aria-live="polite"></div>
         </section>
@@ -53,7 +53,7 @@
                 <canvas id="photoCanvas"></canvas>
               </div>
               <div class="photo-nav-row">
-                <button id="prevPhotoBtn" aria-label="Previous photo">Previous</button>
+                <button id="prevPhotoBtn" aria-label="Back">Back</button>
                 <button id="nextPhotoBtn" aria-label="Next photo">Next</button>
               </div>
             </div>
@@ -81,7 +81,7 @@
 
               <div class="editor-actions">
                 <button id="deleteTextBtn" class="danger-btn wide">Delete Text Box</button>
-                <button id="finishEditingBtn" class="wide">Continue To Stitch</button>
+                <button id="finishEditingBtn" class="wide">Review Order</button>
               </div>
             </aside>
           </div>
@@ -90,11 +90,13 @@
         <section id="stitchScreen" class="screen">
           <div class="selection-line">
             <strong id="stitchCount">0 images</strong>
-            <span>Drag to reorder all uploaded images before downloading.</span>
+            <span>Drag to reorder. Tap an image row to edit text.</span>
           </div>
           <div id="stitchList" class="stitch-list"></div>
           <div class="stitch-download">
-            <button id="exportStitchBtn" class="primary-btn">Download Stitched Image</button>
+            <button id="backToPoolBtn">Back To Remaining Images</button>
+            <button id="backToEditBtn">Back To Edit</button>
+            <button id="exportStitchBtn" class="primary-btn">Stitch & Download</button>
           </div>
         </section>
       </main>

@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  var MAX_PHOTOS = 9;
+  var MAX_PHOTOS = 50;
   var JPEG_QUALITY = 0.96;
   var STITCH_TARGET_WIDTH = 2160;
   var MAX_STITCH_PIXELS = 32000000;
@@ -27,6 +27,9 @@
     editorIndex: 0,
     activeTextId: null,
     stitchIds: [],
+    activeBatchPhotos: [],
+    editorMode: "sequence",
+    reviewEditReturn: false,
     draftText: {
       fontSizePercent: 5,
       color: "#ffffff",
@@ -78,6 +81,8 @@
       "backgroundControls",
       "deleteTextBtn",
       "exportStitchBtn",
+      "backToPoolBtn",
+      "backToEditBtn",
       "stitchCount",
       "stitchList",
       "toast"
@@ -112,7 +117,7 @@
       addFiles(Array.prototype.slice.call(event.dataTransfer.files || []));
     });
 
-    els.editSelectedBtn.addEventListener("click", openEditorForSelection);
+    els.editSelectedBtn.addEventListener("click", startBatchFromSelection);
     els.goStitchBtn.addEventListener("click", goToStitch);
     els.clearBtn.addEventListener("click", clearSession);
     els.prevPhotoBtn.addEventListener("click", function () {
@@ -124,6 +129,8 @@
     els.addTextBtn.addEventListener("click", addTextBox);
     els.deleteTextBtn.addEventListener("click", deleteActiveText);
     els.finishEditingBtn.addEventListener("click", goToStitch);
+    els.backToPoolBtn.addEventListener("click", cancelActiveBatch);
+    els.backToEditBtn.addEventListener("click", backToEditFromReview);
     els.exportStitchBtn.addEventListener("click", exportStitch);
 
     els.fontSize.addEventListener("input", function () {
@@ -212,9 +219,9 @@
   }
 
   async function addFiles(files) {
-    var room = MAX_PHOTOS - state.photos.length;
+    var room = MAX_PHOTOS - getTotalLoadedPhotoCount();
     if (room <= 0) {
-      showToast("The session already has 9 photos.");
+      showToast("The session already has 50 photos.");
       return;
     }
     var accepted = files.filter(isSupportedImage).slice(0, room);
@@ -236,7 +243,7 @@
       updateUi();
       await pause();
     }
-    if (state.photos.length) showScreen("galleryScreen");
+    if (state.photos.length || state.activeBatchPhotos.length) showScreen("galleryScreen");
     showToast("Import complete.");
   }
 
@@ -323,16 +330,16 @@
       });
       button.addEventListener("dblclick", function () {
         state.selectedIds = new Set([photo.id]);
-        openEditorForSelection();
+        startBatchFromSelection();
       });
       els.gallery.appendChild(button);
     });
-    for (var slot = state.photos.length; slot < MAX_PHOTOS; slot += 1) {
+    if (!state.photos.length) {
       var empty = document.createElement("button");
       empty.type = "button";
       empty.className = "thumb empty";
       empty.disabled = true;
-      empty.textContent = "Slot " + (slot + 1);
+      empty.textContent = state.activeBatchPhotos.length ? "Batch in progress" : "Upload photos";
       els.gallery.appendChild(empty);
     }
   }
@@ -346,17 +353,20 @@
 
   function updateUi() {
     var selected = state.selectedIds.size;
-    els.statusText.textContent = state.photos.length + " / 9 photos imported";
-    els.photoCount.textContent = state.photos.length + " photo" + (state.photos.length === 1 ? "" : "s");
-    els.selectedCount.textContent = selected + " selected for text";
+    var totalLoaded = getTotalLoadedPhotoCount();
+    var batchCount = state.activeBatchPhotos.length;
+    els.statusText.textContent = state.photos.length + " available, " + totalLoaded + " / 50 loaded";
+    els.photoCount.textContent = state.photos.length + " available photo" + (state.photos.length === 1 ? "" : "s");
+    els.selectedCount.textContent = selected + " selected" + (selected > 15 ? " - large batch may take longer" : ", recommended up to 15");
     els.editSelectedBtn.disabled = selected === 0;
-    els.addMoreBtn.disabled = state.photos.length >= MAX_PHOTOS;
-    els.goStitchBtn.disabled = state.photos.length === 0;
-    els.prevPhotoBtn.disabled = state.editorIds.length < 2;
-    els.nextPhotoBtn.disabled = state.editorIds.length < 2;
+    els.addMoreBtn.disabled = totalLoaded >= MAX_PHOTOS;
+    els.goStitchBtn.disabled = batchCount === 0;
+    els.goStitchBtn.hidden = batchCount === 0;
+    els.prevPhotoBtn.disabled = !state.editorIds.length;
+    els.nextPhotoBtn.disabled = !state.editorIds.length;
     els.addTextBtn.disabled = !currentPhotoId || !editorReady;
-    els.finishEditingBtn.disabled = state.photos.length === 0;
-    els.clearBtn.disabled = state.photos.length === 0;
+    els.finishEditingBtn.disabled = batchCount === 0;
+    els.clearBtn.disabled = totalLoaded === 0;
     updateEditorPosition();
     updateStitchCount();
     updateTextControls();
@@ -366,36 +376,64 @@
     els.screens.forEach(function (screen) {
       screen.classList.toggle("active", screen.id === screenId);
     });
-    if (screenId === "stitchScreen") prepareStitchFromUploaded();
+    if (screenId === "stitchScreen") prepareStitchFromBatch();
     if (screenId === "editorScreen" && !currentPhotoId && state.editorIds.length) {
       loadEditorPhoto(getPhoto(state.editorIds[state.editorIndex]));
     }
   }
 
   function goToStitch() {
-    if (!state.photos.length) {
-      showToast("Upload at least one photo first.");
+    if (!state.activeBatchPhotos.length) {
+      showToast("Select a batch first.");
       return;
     }
+    prepareStitchFromBatch();
     showScreen("stitchScreen");
   }
 
-  function openEditorForSelection() {
+  function startBatchFromSelection() {
+    if (state.activeBatchPhotos.length) {
+      showToast("Finish or cancel the current batch first.");
+      goToStitch();
+      return;
+    }
     var ids = Array.from(state.selectedIds);
-    if (!ids.length && state.photos.length) ids = [state.photos[0].id];
     if (!ids.length) {
       showToast("Select at least one photo.");
       return;
     }
-    state.editorIds = ids;
+    state.activeBatchPhotos = state.photos.filter(function (photo) {
+      return state.selectedIds.has(photo.id);
+    });
+    state.photos = state.photos.filter(function (photo) {
+      return !state.selectedIds.has(photo.id);
+    });
+    state.selectedIds.clear();
+    state.editorIds = state.activeBatchPhotos.map(function (photo) { return photo.id; });
+    state.stitchIds = state.editorIds.slice();
     state.editorIndex = 0;
+    state.editorMode = "sequence";
+    state.reviewEditReturn = false;
     currentPhotoId = null;
+    renderGallery();
     showScreen("editorScreen");
   }
 
   function moveEditor(delta) {
     if (!state.editorIds.length) return;
-    state.editorIndex = (state.editorIndex + delta + state.editorIds.length) % state.editorIds.length;
+    if (state.reviewEditReturn) {
+      goToStitch();
+      return;
+    }
+    if (delta < 0 && state.editorIndex === 0) {
+      cancelActiveBatch();
+      return;
+    }
+    if (delta > 0 && state.editorIndex === state.editorIds.length - 1) {
+      goToStitch();
+      return;
+    }
+    state.editorIndex += delta;
     loadEditorPhoto(getPhoto(state.editorIds[state.editorIndex]));
   }
 
@@ -677,15 +715,15 @@
     });
   }
 
-  function prepareStitchFromUploaded() {
-    var uploadedIds = state.photos.map(function (photo) {
+  function prepareStitchFromBatch() {
+    var batchIds = state.activeBatchPhotos.map(function (photo) {
       return photo.id;
     });
-    var uploadedSet = new Set(uploadedIds);
+    var batchSet = new Set(batchIds);
     state.stitchIds = state.stitchIds.filter(function (id) {
-      return uploadedSet.has(id);
+      return batchSet.has(id);
     });
-    uploadedIds.forEach(function (id) {
+    batchIds.forEach(function (id) {
       if (state.stitchIds.indexOf(id) === -1) state.stitchIds.push(id);
     });
     renderStitchList();
@@ -704,6 +742,10 @@
       item.querySelector(".order-badge").textContent = String(state.stitchIds.indexOf(id) + 1);
       item.querySelector("strong").textContent = photo.name;
       item.querySelector(".stitch-meta span").textContent = Math.round(photo.width) + " x " + Math.round(photo.height);
+      item.addEventListener("click", function (event) {
+        if (event.target.closest(".drag-handle")) return;
+        openBatchPhotoFromReview(id);
+      });
       els.stitchList.appendChild(item);
     });
     if (window.Sortable && !els.stitchList.sortableInstance) {
@@ -728,10 +770,66 @@
     });
   }
 
+
+  function openBatchPhotoFromReview(id) {
+    var index = state.stitchIds.indexOf(id);
+    if (index === -1) return;
+    state.editorIds = state.stitchIds.slice();
+    state.editorIndex = index;
+    state.editorMode = "review";
+    state.reviewEditReturn = true;
+    currentPhotoId = null;
+    showScreen("editorScreen");
+  }
+
+  function backToEditFromReview() {
+    if (!state.stitchIds.length) return;
+    state.editorIds = state.stitchIds.slice();
+    state.editorIndex = 0;
+    state.editorMode = "sequence";
+    state.reviewEditReturn = false;
+    currentPhotoId = null;
+    showScreen("editorScreen");
+  }
+
+  function cancelActiveBatch() {
+    if (state.activeBatchPhotos.length) {
+      state.photos = state.activeBatchPhotos.concat(state.photos);
+    }
+    state.activeBatchPhotos = [];
+    state.editorIds = [];
+    state.stitchIds = [];
+    state.editorIndex = 0;
+    state.editorMode = "sequence";
+    state.reviewEditReturn = false;
+    currentPhotoId = null;
+    canvas.clear();
+    renderGallery();
+    renderStitchList();
+    updateUi();
+    showScreen(state.photos.length ? "galleryScreen" : "importScreen");
+  }
+
+  function completeActiveBatch() {
+    state.activeBatchPhotos.forEach(revokePhoto);
+    state.activeBatchPhotos = [];
+    state.editorIds = [];
+    state.stitchIds = [];
+    state.editorIndex = 0;
+    state.editorMode = "sequence";
+    state.reviewEditReturn = false;
+    currentPhotoId = null;
+    canvas.clear();
+    renderGallery();
+    renderStitchList();
+    updateUi();
+    showScreen(state.photos.length ? "galleryScreen" : "importScreen");
+  }
+
   async function exportStitch() {
-    prepareStitchFromUploaded();
+    prepareStitchFromBatch();
     if (!state.stitchIds.length) {
-      showToast("Upload at least one photo first.");
+      showToast("Select a batch first.");
       return;
     }
     var photos = state.stitchIds.map(getPhoto).filter(Boolean);
@@ -766,6 +864,7 @@
         return;
       }
       downloadBlob(blob, "photo-log-stitched.jpg");
+      completeActiveBatch();
       showToast("Exported stitched image.");
     }, "image/jpeg", JPEG_QUALITY);
   }
@@ -849,14 +948,18 @@
   }
 
   function clearSession() {
-    if (!state.photos.length) return;
+    if (!getTotalLoadedPhotoCount()) return;
     if (!window.confirm("Clear all imported photos and edits from this session?")) return;
     state.photos.forEach(revokePhoto);
+    state.activeBatchPhotos.forEach(revokePhoto);
     state.photos = [];
+    state.activeBatchPhotos = [];
     state.selectedIds.clear();
     state.editorIds = [];
     state.stitchIds = [];
     state.editorIndex = 0;
+    state.editorMode = "sequence";
+    state.reviewEditReturn = false;
     currentPhotoId = null;
     canvas.clear();
     renderGallery();
@@ -882,9 +985,13 @@
   }
 
   function getPhoto(id) {
-    return state.photos.find(function (photo) {
+    return state.photos.concat(state.activeBatchPhotos).find(function (photo) {
       return photo.id === id;
     });
+  }
+
+  function getTotalLoadedPhotoCount() {
+    return state.photos.length + state.activeBatchPhotos.length;
   }
 
   function normalizeColor(value) {
