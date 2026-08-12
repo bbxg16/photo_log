@@ -1,16 +1,16 @@
 :root {
   color-scheme: light;
-  --bg: #eef7ff;
-  --panel: #ffffff;
-  --ink: #10233f;
-  --muted: #5b7190;
-  --line: #b9ddff;
-  --accent: #1769ff;
-  --accent-2: #11a8ff;
-  --sky: #9be7ff;
+  --bg: #f6f2ea;
+  --panel: #fbf8f1;
+  --ink: #1f1f1d;
+  --muted: #77736a;
+  --line: #d9d3c8;
+  --accent: #2f7d8c;
+  --accent-2: #c9543f;
+  --sky: #d8c98f;
   --accent-ink: #ffffff;
-  --danger: #c2264f;
-  --shadow: 0 18px 54px rgba(23, 105, 255, 0.16);
+  --danger: #a33a32;
+  --shadow: none;
 }
 
 * {
@@ -21,13 +21,9 @@ html,
 body {
   margin: 0;
   min-height: 100%;
-  background:
-    linear-gradient(135deg, rgba(155, 231, 255, 0.46), rgba(17, 168, 255, 0.2) 44%, rgba(23, 105, 255, 0.16)),
-    var(--bg);
+  background: var(--bg);
   color: var(--ink);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background-size: 160% 160%;
-  animation: backdropShift 18s ease-in-out infinite alternate;
 }
 
 button,
@@ -36,19 +32,18 @@ input {
 }
 
 button {
-  border: 1px solid #b9ddff;
-  border-radius: 8px;
-  background: #f8fcff;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: #fbf8f1;
   color: var(--ink);
   min-height: 42px;
   padding: 0 14px;
   cursor: pointer;
-  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+  transition: border-color 160ms ease, background 160ms ease;
 }
 
 button:not(:disabled):hover {
-  transform: translateY(-1px);
-  box-shadow: 0 8px 18px rgba(23, 105, 255, 0.14);
+  border-color: var(--ink);
 }
 
 button:disabled {
@@ -57,15 +52,15 @@ button:disabled {
 }
 
 .primary-btn {
-  border-color: transparent;
-  background: linear-gradient(135deg, var(--accent-2), var(--accent));
+  border-color: var(--ink);
+  background: var(--ink);
   color: var(--accent-ink);
-  box-shadow: 0 10px 22px rgba(23, 105, 255, 0.2);
+  box-shadow: none;
 }
 
 .danger-btn {
-  border-color: #ffc8d8;
-  background: #fff5f8;
+  border-color: #d8b1a8;
+  background: #fbf8f1;
   color: var(--danger);
 }
 
@@ -82,9 +77,9 @@ button:disabled {
   justify-content: center;
   gap: 18px;
   padding: 14px clamp(14px, 3vw, 28px);
-  background: rgba(240, 248, 255, 0.9);
-  border-bottom: 1px solid rgba(185, 221, 255, 0.86);
-  backdrop-filter: blur(14px);
+  background: rgba(246, 242, 234, 0.96);
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: none;
 }
 
 h1,
@@ -121,17 +116,15 @@ main {
   display: grid;
   min-height: min(68vh, 620px);
   place-items: center;
-  border: 1px dashed #62bfff;
-  border-radius: 8px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(222, 244, 255, 0.84)),
-    #fff;
-  box-shadow: var(--shadow);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: #fbf8f1;
+  box-shadow: none;
 }
 
 .import-panel.dragover {
-  border-color: var(--accent);
-  background: #eaf8ff;
+  border-color: var(--ink);
+  background: #f0eadf;
 }
 
 .file-input {
@@ -156,9 +149,9 @@ main {
   width: 64px;
   height: 64px;
   place-items: center;
-  border-radius: 50%;
-  background: var(--sky);
-  color: #073d7a;
+  border-radius: 2px;
+  background: #efe7d8;
+  color: var(--ink);
   font-size: 38px;
   line-height: 1;
 }
@@ -179,11 +172,11 @@ main {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   padding: 10px;
-  border: 1px solid rgba(185, 221, 255, 0.92);
-  border-radius: 8px;
-  background: rgba(248, 252, 255, 0.94);
-  box-shadow: var(--shadow);
-  backdrop-filter: blur(14px);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: rgba(251, 248, 241, 0.96);
+  box-shadow: none;
+  backdrop-filter: none;
 }
 
 .selection-line {
@@ -198,30 +191,30 @@ main {
 .gallery {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
-  gap: 10px;
-  max-width: 980px;
+  gap: 14px;
+  max-width: 1040px;
 }
 
 .thumb {
   position: relative;
   overflow: hidden;
   aspect-ratio: 1;
-  border: 2px solid transparent;
-  border-radius: 8px;
-  background: #e4f5ff;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  background: #efe9dd;
   padding: 0;
 }
 
 .thumb.selected {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(23, 105, 255, 0.18);
+  border-color: var(--ink);
+  box-shadow: none;
 }
 
 .thumb.empty {
   display: grid;
   place-items: center;
-  border: 1px dashed #8ed4ff;
-  background: rgba(255, 255, 255, 0.5);
+  border: 1px dashed var(--line);
+  background: rgba(251, 248, 241, 0.55);
   color: var(--muted);
   cursor: default;
 }
@@ -254,9 +247,9 @@ main {
   width: 24px;
   height: 24px;
   place-items: center;
-  border-radius: 999px;
-  background: var(--sky);
-  color: #073d7a;
+  border-radius: 2px;
+  background: var(--accent);
+  color: #fff;
   font-weight: 800;
   opacity: 0;
 }
@@ -301,10 +294,10 @@ main {
   min-height: 360px;
   place-items: center;
   overflow: auto;
-  border: 1px solid rgba(185, 221, 255, 0.92);
-  border-radius: 8px;
-  background: #24364f;
-  box-shadow: var(--shadow);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: #e7e0d3;
+  box-shadow: none;
   touch-action: none;
 }
 
@@ -332,10 +325,10 @@ main {
   display: grid;
   gap: 12px;
   padding: 14px;
-  border: 1px solid rgba(185, 221, 255, 0.92);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: var(--shadow);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: #fbf8f1;
+  box-shadow: none;
 }
 
 .text-edit-controls {
@@ -358,7 +351,7 @@ main {
 
 input[type="range"] {
   width: 100%;
-  accent-color: var(--accent-2);
+  accent-color: var(--accent);
 }
 
 .swatches {
@@ -372,11 +365,11 @@ input[type="range"] {
   height: 36px;
   min-height: 36px;
   padding: 0;
-  border-radius: 999px;
+  border-radius: 2px;
 }
 
 .swatch.active {
-  outline: 3px solid rgba(17, 168, 255, 0.32);
+  outline: 2px solid var(--ink);
   outline-offset: 2px;
 }
 
@@ -387,8 +380,8 @@ input[type="range"] {
 }
 
 .segmented button.active {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--ink);
+  border-color: var(--ink);
   color: #fff;
 }
 
@@ -420,16 +413,16 @@ input[type="range"] {
   gap: 12px;
   align-items: center;
   padding: 10px;
-  border: 1px solid rgba(185, 221, 255, 0.92);
-  border-radius: 8px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(229, 246, 255, 0.9));
-  box-shadow: 0 10px 26px rgba(23, 105, 255, 0.1);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: #fbf8f1;
+  box-shadow: none;
 }
 
 .stitch-item img {
   width: 68px;
   height: 68px;
-  border-radius: 6px;
+  border-radius: 2px;
   object-fit: cover;
 }
 
@@ -454,7 +447,7 @@ input[type="range"] {
   width: 30px;
   height: 30px;
   place-items: center;
-  border-radius: 999px;
+  border-radius: 2px;
   background: var(--accent);
   color: #fff;
   font-weight: 800;
@@ -463,8 +456,8 @@ input[type="range"] {
 .limit-warning {
   padding: 14px;
   border: 1px solid #f4c7c3;
-  border-radius: 8px;
-  background: #fff7f6;
+  border-radius: 2px;
+  background: #fbf8f1;
   color: var(--danger);
 }
 
@@ -486,8 +479,8 @@ input[type="range"] {
   z-index: 40;
   max-width: min(92vw, 520px);
   transform: translateX(-50%) translateY(16px);
-  border-radius: 8px;
-  background: #0b3f86;
+  border-radius: 2px;
+  background: #1f1f1d;
   color: #fff;
   padding: 12px 14px;
   opacity: 0;
@@ -498,16 +491,6 @@ input[type="range"] {
 .toast.show {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
-}
-
-@keyframes backdropShift {
-  from {
-    background-position: 0% 50%;
-  }
-
-  to {
-    background-position: 100% 50%;
-  }
 }
 
 @media (max-width: 760px) {
@@ -525,11 +508,11 @@ input[type="range"] {
     min-width: 0;
     width: fit-content;
     margin: 0 auto 6px;
-    border-radius: 999px;
-    background: rgba(248, 252, 255, 0.88);
+    border-radius: 2px;
+    background: #fbf8f1;
     padding: 5px 10px;
     font-size: 12px;
-    box-shadow: 0 6px 16px rgba(23, 105, 255, 0.12);
+    box-shadow: none;
   }
 
   .editor-layout {
@@ -563,7 +546,7 @@ input[type="range"] {
     padding: 8px 10px;
     border-inline: 0;
     border-bottom: 0;
-    border-radius: 8px 8px 0 0;
+    border-radius: 2px 2px 0 0;
   }
 
   .text-edit-controls {
