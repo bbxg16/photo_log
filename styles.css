@@ -198,6 +198,7 @@ main {
 }
 
 .import-copy .primary-btn {
+  justify-self: end;
   min-height: 50px;
   margin-top: 6px;
   border-color: var(--ink);
