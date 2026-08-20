@@ -20,9 +20,12 @@
 
 html,
 body {
+  position: relative;
   margin: 0;
   min-height: 100%;
-  background: var(--bg);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(248, 217, 65, 0.2) 38%, rgba(253, 159, 157, 0.22) 68%, rgba(112, 176, 177, 0.24)),
+    url("hero.png") center / cover fixed no-repeat;
   color: var(--ink);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
@@ -34,7 +37,7 @@ input {
 
 button {
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 14px;
   background: var(--panel);
   color: var(--ink);
   min-height: 42px;
@@ -45,6 +48,7 @@ button {
 
 button:not(:disabled):hover {
   border-color: var(--ink);
+  filter: saturate(1.08);
 }
 
 button:disabled {
@@ -53,9 +57,9 @@ button:disabled {
 }
 
 .primary-btn {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: var(--accent-ink);
+  border-color: var(--ink);
+  background: var(--sky);
+  color: var(--ink);
   box-shadow: none;
 }
 
@@ -66,6 +70,8 @@ button:disabled {
 }
 
 .app-shell {
+  position: relative;
+  z-index: 1;
   min-height: 100vh;
 }
 
@@ -78,9 +84,9 @@ button:disabled {
   justify-content: center;
   gap: 18px;
   padding: 14px clamp(14px, 3vw, 28px);
-  background: rgba(255, 255, 255, 0.94);
-  border-bottom: 1px solid var(--line);
-  backdrop-filter: none;
+  background: rgba(255, 255, 255, 0.78);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(10px);
 }
 
 h1,
@@ -111,6 +117,16 @@ main {
 
 .screen.active {
   display: block;
+}
+
+#galleryScreen.active,
+#editorScreen.active,
+#stitchScreen.active {
+  padding: clamp(14px, 2.6vw, 28px);
+  border: 1px solid rgba(255, 255, 255, 0.74);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(8px);
 }
 
 .import-panel {
@@ -228,9 +244,24 @@ main {
   transform: translateX(-50%);
   border: 1px solid var(--line);
   border-radius: 16px;
-  background: rgba(251, 248, 241, 0.96);
-  box-shadow: none;
-  backdrop-filter: none;
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(10px);
+}
+
+
+.bottom-actions button {
+  border-color: var(--accent);
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 750;
+}
+
+.bottom-actions .primary-btn {
+  border-color: var(--ink);
+  background: var(--sky);
+  color: var(--ink);
 }
 
 .selection-line {
@@ -254,8 +285,8 @@ main {
   overflow: hidden;
   aspect-ratio: 1;
   border: 1px solid transparent;
-  border-radius: 12px;
-  background: #efe9dd;
+  border-radius: 16px;
+  background: rgba(255, 250, 242, 0.76);
   padding: 0;
 }
 
@@ -272,15 +303,15 @@ main {
 }
 
 .thumb.selected {
-  border-color: var(--ink);
-  box-shadow: none;
+  border-color: var(--sky);
+  box-shadow: 0 0 0 3px rgba(248, 217, 65, 0.72);
 }
 
 .thumb.empty {
   display: grid;
   place-items: center;
   border: 1px dashed var(--line);
-  background: rgba(251, 248, 241, 0.55);
+  background: rgba(255, 255, 255, 0.62);
   color: var(--muted);
   cursor: default;
 }
@@ -318,7 +349,7 @@ main {
   width: 24px;
   height: 24px;
   place-items: center;
-  border-radius: 2px;
+  border-radius: 999px;
   background: var(--sky);
   color: var(--ink);
   font-weight: 800;
@@ -350,7 +381,8 @@ main {
 
 .rotate-btn {
   border-color: var(--accent);
-  color: var(--accent);
+  background: var(--accent);
+  color: #fff;
 }
 
 .editor-toolbar span {
@@ -382,8 +414,8 @@ main {
   place-items: center;
   overflow: auto;
   border: 1px solid var(--line);
-  border-radius: 2px;
-  background: #fff3d7;
+  border-radius: 18px;
+  background: rgba(255, 243, 215, 0.72);
   box-shadow: none;
   touch-action: none;
 }
@@ -400,6 +432,11 @@ main {
 
 .photo-nav-row button {
   min-width: 120px;
+  border-color: var(--accent);
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 750;
 }
 
 .canvas-container,
@@ -413,9 +450,9 @@ main {
   gap: 12px;
   padding: 14px;
   border: 1px solid var(--line);
-  border-radius: 2px;
-  background: var(--panel);
-  box-shadow: none;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.06);
 }
 
 .text-edit-controls {
@@ -428,8 +465,8 @@ main {
   width: 100%;
   min-height: 36px;
   border: 1px solid var(--line);
-  border-radius: 2px;
-  background: #fff;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
   color: var(--ink);
   padding: 0 10px;
   font: inherit;
@@ -463,7 +500,7 @@ main {
   height: 36px;
   min-height: 36px;
   padding: 0;
-  border-radius: 2px;
+  border-radius: 999px;
 }
 
 .swatch.active {
@@ -529,8 +566,10 @@ main {
 .stitch-download button {
   min-width: min(100%, 320px);
   border-radius: 999px;
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--sky);
+  border-color: var(--ink);
+  color: var(--ink);
+  font-weight: 800;
 }
 
 .stitch-item {
@@ -541,9 +580,9 @@ main {
   align-items: center;
   padding: 8px;
   border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--panel);
-  box-shadow: none;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.06);
 }
 
 .stitch-photo-button {
@@ -553,7 +592,7 @@ main {
   padding: 0;
   overflow: hidden;
   border: 0;
-  border-radius: 10px;
+  border-radius: 14px;
   background: transparent;
 }
 
@@ -561,7 +600,7 @@ main {
   display: block;
   width: 100%;
   height: 78px;
-  border-radius: 10px;
+  border-radius: 14px;
   object-fit: cover;
 }
 
@@ -572,7 +611,7 @@ main {
   height: 28px;
   place-items: center;
   border-radius: 999px;
-  background: rgba(112, 176, 177, 0.94);
+  background: var(--accent);
   color: #fff;
   font-size: 12px;
   font-weight: 800;
@@ -596,13 +635,16 @@ main {
 }
 
 .drag-handle {
+  border-color: var(--accent);
+  background: rgba(112, 176, 177, 0.14);
   color: var(--accent);
   cursor: grab;
   touch-action: none;
 }
 
 .remove-stitch-btn {
-  border-color: #e8b8ad;
+  border-color: var(--accent-2);
+  background: rgba(203, 91, 59, 0.12);
   color: var(--danger);
 }
 
@@ -613,8 +655,8 @@ main {
   z-index: 40;
   max-width: min(92vw, 520px);
   transform: translateX(-50%) translateY(16px);
-  border-radius: 2px;
-  background: #1f1f1d;
+  border-radius: 999px;
+  background: #000000;
   color: #fff;
   padding: 12px 14px;
   opacity: 0;
@@ -680,8 +722,8 @@ main {
     min-width: 0;
     width: fit-content;
     margin: 0 auto 6px;
-    border-radius: 2px;
-    background: var(--panel);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.86);
     padding: 5px 10px;
     font-size: 12px;
     box-shadow: none;
@@ -718,7 +760,9 @@ main {
     padding: 7px 10px;
     border-inline: 0;
     border-bottom: 0;
-    border-radius: 2px 2px 0 0;
+    border-radius: 18px 18px 0 0;
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(10px);
   }
 
   .text-edit-controls {
