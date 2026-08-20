@@ -361,7 +361,7 @@
     var selected = state.selectedIds.size;
     var totalLoaded = getTotalLoadedPhotoCount();
     var batchCount = state.activeBatchPhotos.length;
-    els.statusText.textContent = state.photos.length + " available, " + totalLoaded + " / 50 loaded";
+    els.statusText.textContent = totalLoaded + " / 50";
     els.photoCount.textContent = state.photos.length + " available photo" + (state.photos.length === 1 ? "" : "s");
     els.selectedCount.textContent = selected + " selected" + (selected > 15 ? " - large batch may take longer" : ", recommended up to 15");
     els.editSelectedBtn.disabled = selected === 0;

@@ -73,38 +73,19 @@ button:disabled {
   min-height: 100vh;
 }
 
-.topbar {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 18px;
-  padding: 14px clamp(14px, 3vw, 28px);
-  background: rgba(255, 255, 255, 0.9);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.86);
-  backdrop-filter: blur(8px);
-}
-
 h1,
 h2,
 p {
   margin: 0;
 }
 
-h1 {
-  font-size: 22px;
-  letter-spacing: 0;
-}
-
-.topbar p,
 .selection-line,
 .import-copy p {
   color: var(--muted);
 }
 
 main {
+  min-height: 100vh;
   padding: clamp(14px, 3vw, 28px);
   padding-bottom: 96px;
 }
@@ -122,7 +103,7 @@ main {
 #galleryScreen.active,
 #editorScreen.active,
 #stitchScreen.active {
-  min-height: calc(100vh - 96px);
+  min-height: calc(100vh - 28px);
   padding: clamp(14px, 2.6vw, 28px);
 }
 
@@ -142,12 +123,10 @@ main {
 #editorScreen.active::after,
 #stitchScreen.active::after {
   content: "";
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: -1;
-  border: 1px solid rgba(255, 255, 255, 0.9);
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.58);
+  background: rgba(255, 255, 255, 0.56);
   backdrop-filter: blur(2px);
 }
 
@@ -233,6 +212,19 @@ main {
   font-weight: 650;
   line-height: 1.42;
   text-shadow: none;
+}
+
+.hero-count {
+  display: inline-grid;
+  min-height: 30px;
+  align-items: center;
+  justify-self: start;
+  border: 1px solid var(--ink);
+  border-radius: 999px;
+  background: var(--pink);
+  color: var(--ink);
+  padding: 0 12px;
+  font-weight: 800;
 }
 
 .import-copy .primary-btn {
@@ -692,23 +684,28 @@ main {
 }
 
 @media (max-width: 760px) {
-  .topbar {
-    align-items: stretch;
-    flex-direction: column;
+  main {
+    padding: 14px;
+    padding-bottom: 96px;
+  }
+
+  #importScreen.active {
+    margin: -14px;
   }
 
   .import-panel,
   .import-hero {
-    min-height: min(78vh, 680px);
-    border-radius: 18px;
+    min-height: 100svh;
+    border: 0;
+    border-radius: 0;
   }
 
   #galleryScreen.active,
   #editorScreen.active,
   #stitchScreen.active {
-    min-height: calc(100vh - 88px);
-    margin-inline: -14px;
-    padding-inline: 14px;
+    min-height: 100svh;
+    margin: -14px;
+    padding: 18px 14px 110px;
     border-radius: 0;
   }
 
