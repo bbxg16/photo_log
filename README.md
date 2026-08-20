@@ -4,6 +4,10 @@ A lightweight browser-based editor for turning multiple photo-log images into lo
 
 Photo Log Editor is designed for people who want to upload a larger set of images, choose a batch to stitch together, optionally add text to some images, reorder the selected batch, and export one long image for Weibo, WeChat Moments/Friends Circle, or other social platforms.
 
+## Landing Page
+
+The first screen uses `hero.png` as the hero image and follows its coral, yellow, pink, teal, black, and white color palette.
+
 ## What It Does
 
 - Upload up to 50 photos in one session and remove individual uploaded photos before batching.
