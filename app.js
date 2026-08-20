@@ -83,8 +83,6 @@
       "colorControls",
       "backgroundControls",
       "exportStitchBtn",
-      "backToPoolBtn",
-      "backToEditBtn",
       "stitchCount",
       "stitchList",
       "toast",
@@ -130,8 +128,6 @@
       moveEditor(1);
     });
     els.addTextBtn.addEventListener("click", addTextBox);
-    els.backToPoolBtn.addEventListener("click", cancelActiveBatch);
-    els.backToEditBtn.addEventListener("click", backToEditFromReview);
     els.exportStitchBtn.addEventListener("click", exportStitch);
 
     els.fontSize.addEventListener("input", function () {
@@ -878,13 +874,13 @@
       var item = document.createElement("div");
       item.className = "stitch-item";
       item.dataset.id = id;
-      item.innerHTML = '<span class="order-badge"></span><img alt="" src="' + photo.thumbUrl + '"><div class="stitch-meta"><strong></strong><span></span></div><button class="drag-handle" type="button" aria-label="Drag to reorder">☰</button>';
+      item.innerHTML = '<span class="order-badge"></span><button class="stitch-photo-button" type="button" aria-label="Edit image"><img alt="" src="' + photo.thumbUrl + '"></button><button class="drag-handle" type="button" aria-label="Drag to reorder">☰</button><button class="remove-stitch-btn" type="button" aria-label="Remove image">×</button>';
       item.querySelector(".order-badge").textContent = String(state.stitchIds.indexOf(id) + 1);
-      item.querySelector("strong").textContent = photo.name;
-      item.querySelector(".stitch-meta span").textContent = Math.round(photo.width) + " x " + Math.round(photo.height);
-      item.addEventListener("click", function (event) {
-        if (event.target.closest(".drag-handle")) return;
+      item.querySelector(".stitch-photo-button").addEventListener("click", function () {
         openBatchPhotoFromReview(id);
+      });
+      item.querySelector(".remove-stitch-btn").addEventListener("click", function () {
+        removePhotoFromStitch(id);
       });
       els.stitchList.appendChild(item);
     });
@@ -911,6 +907,37 @@
   }
 
 
+  function removePhotoFromStitch(id) {
+    var photo = getPhoto(id);
+    if (!photo) return;
+    state.stitchIds = state.stitchIds.filter(function (photoId) {
+      return photoId !== id;
+    });
+    state.editorIds = state.editorIds.filter(function (photoId) {
+      return photoId !== id;
+    });
+    state.activeBatchPhotos = state.activeBatchPhotos.filter(function (batchPhoto) {
+      return batchPhoto.id !== id;
+    });
+    if (!state.photos.some(function (availablePhoto) { return availablePhoto.id === id; })) {
+      state.photos.push(photo);
+    }
+    if (!state.stitchIds.length) {
+      currentPhotoId = null;
+      state.editorIndex = 0;
+      state.editorMode = "sequence";
+      state.reviewEditReturn = false;
+      renderGallery();
+      renderStitchList();
+      updateUi();
+      showScreen(state.photos.length ? "galleryScreen" : "importScreen");
+      return;
+    }
+    refreshStitchOrderBadges();
+    renderStitchList();
+    updateUi();
+  }
+
   function openBatchPhotoFromReview(id) {
     var index = state.stitchIds.indexOf(id);
     if (index === -1) return;
@@ -918,16 +945,6 @@
     state.editorIndex = index;
     state.editorMode = "review";
     state.reviewEditReturn = true;
-    currentPhotoId = null;
-    showScreen("editorScreen");
-  }
-
-  function backToEditFromReview() {
-    if (!state.stitchIds.length) return;
-    state.editorIds = state.stitchIds.slice();
-    state.editorIndex = 0;
-    state.editorMode = "sequence";
-    state.reviewEditReturn = false;
     currentPhotoId = null;
     showScreen("editorScreen");
   }

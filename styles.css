@@ -33,7 +33,7 @@ input {
 
 button {
   border: 1px solid var(--line);
-  border-radius: 2px;
+  border-radius: 10px;
   background: #fbf8f1;
   color: var(--ink);
   min-height: 42px;
@@ -52,8 +52,8 @@ button:disabled {
 }
 
 .primary-btn {
-  border-color: var(--ink);
-  background: var(--ink);
+  border-color: var(--accent);
+  background: var(--accent);
   color: var(--accent-ink);
   box-shadow: none;
 }
@@ -260,17 +260,26 @@ main {
 
 .editor-toolbar {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 14px;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.editor-action-row {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.editor-action-row button {
+  min-height: 34px;
+  padding: 0 18px;
+  border-radius: 999px;
+  font-size: 13px;
 }
 
 .rotate-btn {
-  min-height: 32px;
-  padding: 0 12px;
-  font-size: 13px;
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .editor-toolbar span {
@@ -413,13 +422,18 @@ main {
 
 .segmented {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
+  grid-template-columns: repeat(3, minmax(74px, 104px));
+  justify-content: center;
+  gap: 8px;
+}
+
+.segmented button {
+  border-radius: 999px;
 }
 
 .segmented button.active {
-  background: var(--ink);
-  border-color: var(--ink);
+  background: var(--accent);
+  border-color: var(--accent);
   color: #fff;
 }
 
@@ -429,65 +443,69 @@ main {
 
 .stitch-list {
   display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
   gap: 12px;
-  max-width: 820px;
+  max-width: 860px;
 }
 
 .stitch-download {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  max-width: 820px;
-  margin-top: 18px;
+  display: flex;
+  justify-content: center;
+  max-width: 860px;
+  margin-top: 22px;
 }
 
 .stitch-download button {
-  width: 100%;
+  min-width: min(100%, 320px);
+  border-radius: 999px;
+  background: var(--accent);
+  border-color: var(--accent);
 }
 
 .stitch-item {
+  position: relative;
   display: grid;
-  grid-template-columns: 36px 68px minmax(0, 1fr) 44px;
-  gap: 12px;
-  align-items: center;
-  padding: 10px;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  padding: 8px;
   border: 1px solid var(--line);
-  border-radius: 2px;
+  border-radius: 14px;
   background: #fbf8f1;
   box-shadow: none;
 }
 
+.stitch-photo-button {
+  display: block;
+  width: 100%;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+}
+
 .stitch-item img {
-  width: 68px;
-  height: 68px;
-  border-radius: 2px;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 10px;
   object-fit: cover;
 }
 
-.stitch-item strong {
-  display: block;
-  overflow-wrap: anywhere;
-}
-
-.stitch-meta {
-  min-width: 0;
-}
-
-.stitch-meta span {
-  display: block;
-  margin-top: 4px;
-  color: var(--muted);
-  font-size: 12px;
-}
-
 .order-badge {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  z-index: 2;
   display: grid;
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   place-items: center;
-  border-radius: 2px;
-  background: var(--accent);
+  border-radius: 999px;
+  background: rgba(47, 125, 140, 0.92);
   color: #fff;
+  font-size: 12px;
   font-weight: 800;
 }
 
@@ -499,15 +517,24 @@ main {
   color: var(--danger);
 }
 
-.drag-handle {
+.drag-handle,
+.remove-stitch-btn {
   display: grid;
-  width: 38px;
-  min-height: 38px;
+  min-height: 34px;
   place-items: center;
   padding: 0;
+  border-radius: 999px;
+}
+
+.drag-handle {
   color: var(--accent);
   cursor: grab;
   touch-action: none;
+}
+
+.remove-stitch-btn {
+  border-color: #e8b8ad;
+  color: var(--danger);
 }
 
 .toast {
@@ -608,14 +635,13 @@ main {
     width: 100%;
   }
 
-  #addTextBtn {
-    min-height: 34px;
-    padding: 0 8px;
+  .editor-action-row {
+    grid-column: 1 / -1;
   }
 
-  #addTextBtn {
-    grid-column: 1 / -1;
-    grid-row: auto;
+  .editor-action-row button {
+    min-height: 30px;
+    padding: 0 14px;
   }
 
   .text-panel .field-label {
@@ -674,13 +700,12 @@ main {
   }
 
 
-  .bottom-actions,
-  .stitch-download {
+  .bottom-actions {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .stitch-download .primary-btn {
-    grid-column: 1 / -1;
+  .stitch-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .gallery {

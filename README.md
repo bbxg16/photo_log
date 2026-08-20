@@ -15,12 +15,13 @@ Photo Log Editor is designed for people who want to upload a larger set of image
 - Add one or more editable text boxes directly on an image.
 - Adjust text size with a simple number input.
 - Choose preset colors or use the custom color picker.
-- Choose simple system font styles for Chinese and English text, including a handwritten-style option when available.
+- Choose simple system font styles for Chinese and English text, including handwritten-style options when available.
 - Set text background to none, white, or black.
 - Drag text boxes into place.
 - Rotate images before stitching.
 - Review all selected images in order before stitching.
 - Reorder the selected batch.
+- Remove images from the review step if they should not be stitched.
 - Tap an image in the review step to edit its text again.
 - Export one long vertical stitched image.
 - Return to remaining uploaded images and start another stitched image without reuploading.
@@ -34,7 +35,7 @@ Photo Log Editor is designed for people who want to upload a larger set of image
 5. Add text or rotate where needed, or press Next to skip.
 6. Review the selected batch in order.
 7. Reorder images if needed.
-8. Tap any image to edit it again.
+8. Delete images from this stitched batch if needed, or tap any image to edit it again.
 9. Press Stitch & Download.
 10. Return to the remaining uploaded images and start another batch, or upload more images.
 
