@@ -70,7 +70,6 @@
       "addMoreBtn",
       "editSelectedBtn",
       "goStitchBtn",
-      "clearBtn",
       "prevPhotoBtn",
       "nextPhotoBtn",
       "editorPosition",
@@ -120,7 +119,6 @@
 
     els.editSelectedBtn.addEventListener("click", startBatchFromSelection);
     els.goStitchBtn.addEventListener("click", goToStitch);
-    els.clearBtn.addEventListener("click", clearSession);
     els.prevPhotoBtn.addEventListener("click", function () {
       moveEditor(-1);
     });
@@ -315,20 +313,21 @@
   function renderGallery() {
     els.gallery.innerHTML = "";
     state.photos.forEach(function (photo) {
-      var button = document.createElement("button");
-      button.type = "button";
-      button.className = "thumb" + (state.selectedIds.has(photo.id) ? " selected" : "");
-      button.dataset.id = photo.id;
-      button.innerHTML = '<img alt="" src="' + photo.thumbUrl + '"><span class="thumb-check">✓</span><span class="thumb-name"></span>';
-      button.querySelector(".thumb-name").textContent = photo.name;
-      button.addEventListener("click", function () {
+      var item = document.createElement("div");
+      item.className = "thumb" + (state.selectedIds.has(photo.id) ? " selected" : "");
+      item.dataset.id = photo.id;
+      item.innerHTML = '<button class="thumb-photo" type="button" aria-label="Select photo"><img alt="" src="' + photo.thumbUrl + '"><span class="thumb-check">✓</span></button><button class="thumb-remove" type="button" aria-label="Remove photo">×</button>';
+      item.querySelector(".thumb-photo").addEventListener("click", function () {
         togglePhotoSelection(photo.id);
       });
-      button.addEventListener("dblclick", function () {
+      item.querySelector(".thumb-photo").addEventListener("dblclick", function () {
         state.selectedIds = new Set([photo.id]);
         startBatchFromSelection();
       });
-      els.gallery.appendChild(button);
+      item.querySelector(".thumb-remove").addEventListener("click", function () {
+        removeAvailablePhoto(photo.id);
+      });
+      els.gallery.appendChild(item);
     });
     if (!state.photos.length) {
       var empty = document.createElement("button");
@@ -338,6 +337,17 @@
       empty.textContent = state.activeBatchPhotos.length ? "Batch in progress" : "Upload photos";
       els.gallery.appendChild(empty);
     }
+  }
+
+  function removeAvailablePhoto(id) {
+    var photo = state.photos.find(function (item) { return item.id === id; });
+    if (!photo) return;
+    state.photos = state.photos.filter(function (item) { return item.id !== id; });
+    state.selectedIds.delete(id);
+    revokePhoto(photo);
+    renderGallery();
+    updateUi();
+    if (!getTotalLoadedPhotoCount()) showScreen("importScreen");
   }
 
   function togglePhotoSelection(id) {
@@ -361,7 +371,6 @@
     els.prevPhotoBtn.disabled = !state.editorIds.length;
     els.nextPhotoBtn.disabled = !state.editorIds.length;
     els.addTextBtn.disabled = !currentPhotoId || !editorReady;
-    els.clearBtn.disabled = totalLoaded === 0;
     updateEditorPosition();
     updateStitchCount();
     updateTextControls();

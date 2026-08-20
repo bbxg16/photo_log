@@ -6,8 +6,8 @@ Photo Log Editor is designed for people who want to upload a larger set of image
 
 ## What It Does
 
-- Upload up to 50 photos in one session.
-- Select a batch of uploaded photos to stitch together.
+- Upload up to 50 photos in one session and remove individual uploaded photos before batching.
+- Select a batch of uploaded photos to stitch together from an image-only gallery.
 - Recommended batch size is up to 15 images, but the app does not block larger batches.
 - Move selected batch images out of the available pool while that long image is being made.
 - Edit selected images one by one with simple Back and Next navigation.
