@@ -115,7 +115,7 @@ main {
   inset: 0;
   z-index: -1;
   background:
-    linear-gradient(rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.82)),
+    linear-gradient(rgba(255, 255, 255, 0.68), rgba(255, 255, 255, 0.68)),
     url("hero.png") center / cover no-repeat;
 }
 
@@ -126,7 +126,7 @@ main {
   position: fixed;
   inset: 0;
   z-index: -1;
-  background: rgba(255, 255, 255, 0.56);
+  background: rgba(255, 255, 255, 0.34);
   backdrop-filter: blur(2px);
 }
 
@@ -253,6 +253,7 @@ main {
   display: grid;
   width: min(720px, calc(100vw - 20px));
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  justify-items: stretch;
   gap: 10px;
   padding: 10px;
   transform: translateX(-50%);
@@ -265,6 +266,8 @@ main {
 
 
 .bottom-actions button {
+  width: 100%;
+  min-width: 0;
   border-color: var(--accent);
   border-radius: 999px;
   background: var(--accent);
@@ -882,6 +885,7 @@ main {
 
   .bottom-actions {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    justify-items: stretch;
     gap: 6px;
     padding: 7px;
   }
