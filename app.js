@@ -5,7 +5,7 @@
   var JPEG_QUALITY = 0.96;
   var STITCH_TARGET_WIDTH = 2160;
   var MAX_STITCH_PIXELS = 32000000;
-  var THUMB_SIZE = 360;
+  var THUMB_SIZE = 640;
   var FONT_SIZE_BASE_WIDTH = 720;
   var DEFAULT_FONT_FAMILY = 'Arial, "PingFang SC", "Microsoft YaHei", sans-serif';
   var TEXT_COLORS = [
@@ -303,7 +303,7 @@
           canvasEl.height = 1;
           if (blob) resolve(blob);
           else reject(new Error("Thumbnail failed"));
-        }, "image/jpeg", 0.82);
+        }, "image/jpeg", 0.88);
       };
       img.onerror = reject;
       img.src = url;
@@ -475,17 +475,37 @@
 
   async function refreshEditorBackground(photo, loadToken) {
     if (!photo || (loadToken && loadToken !== editorLoadToken)) return;
-    var dataUrl = await renderPhotoFrameDataUrl(photo, canvas.getWidth(), canvas.getHeight(), 0.92);
+    var displayWidth = canvas.getWidth();
+    var displayHeight = canvas.getHeight();
+    var ratio = getPreviewPixelRatio(displayWidth, displayHeight);
+    var dataUrl = await renderPhotoFrameDataUrl(photo, displayWidth * ratio, displayHeight * ratio, 0.96);
     if (loadToken && loadToken !== editorLoadToken) return;
     return new Promise(function (resolve) {
       fabric.Image.fromURL(dataUrl, function (img) {
-        img.set({ left: 0, top: 0, selectable: false, evented: false });
+        img.set({
+          left: 0,
+          top: 0,
+          selectable: false,
+          evented: false,
+          scaleX: displayWidth / img.width,
+          scaleY: displayHeight / img.height
+        });
         canvas.setBackgroundImage(img, function () {
           canvas.requestRenderAll();
           resolve();
         });
       });
     });
+  }
+
+  function getPreviewPixelRatio(width, height) {
+    var deviceRatio = Math.max(1, window.devicePixelRatio || 1);
+    var ratio = Math.min(deviceRatio, 2.5);
+    var maxPixels = 4200000;
+    while (width * height * ratio * ratio > maxPixels && ratio > 1) {
+      ratio -= 0.25;
+    }
+    return Math.max(1, ratio);
   }
 
   function defaultTransform() {
