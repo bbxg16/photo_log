@@ -1051,9 +1051,10 @@
         showToast("Stitch export failed.");
         return;
       }
-      downloadBlob(blob, "photo-log-stitched.jpg");
-      completeActiveBatch();
-      showToast("Exported stitched image.");
+      shareOrDownloadBlob(blob, "photo-log-stitched.jpg").then(function (shared) {
+        completeActiveBatch();
+        showToast(shared ? "Opened save/share options." : "Downloaded stitched image.");
+      });
     }, "image/jpeg", JPEG_QUALITY);
   }
 
@@ -1229,6 +1230,25 @@
       };
       img.src = url;
     });
+  }
+
+  async function shareOrDownloadBlob(blob, filename) {
+    var file = new File([blob], filename, { type: blob.type || "image/jpeg" });
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: "Photo log stitched image",
+          text: "Save or share your stitched photo log."
+        });
+        return true;
+      } catch (error) {
+        if (error && error.name === "AbortError") return true;
+        console.warn("Native share failed, falling back to download", error);
+      }
+    }
+    downloadBlob(blob, filename);
+    return false;
   }
 
   function downloadBlob(blob, filename) {
